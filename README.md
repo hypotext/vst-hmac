@@ -1,0 +1,1 @@
+In progress. For messy code, see github.com/hypotext/vst-crypto
