@@ -4,6 +4,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import List. Import ListNotations.
 
+Module HP.
+
 (*SHA256: blocksize = 64bytes 
     corresponds to 
     #define SHA_LBLOCK	16
@@ -121,3 +123,5 @@ Lemma RFC6868_exampleAUTH256_2:
   "7768617420646f2079612077616e7420666f72206e6f7468696e673f"
   "167f928588c5cc2eef8e3093caa0e87c9ff566a14794aa61648d81621a2a40c6".
 vm_compute. reflexivity. Qed.
+
+End HP.

@@ -3,6 +3,9 @@ Require Import Coqlib.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import List. Import ListNotations.
+Require Import HMAC_functional_prog.
+
+Module HMAC_progZ.
 
 (*SHA256: blocksize = 64bytes 
     corresponds to 
@@ -86,6 +89,130 @@ Definition Opad := (* Byte.repr *) 92. (*0x5c*)
 
 Definition HMAC256 := HMAC_SHA256.HMAC Ipad Opad.
 
+(* ----------------- *)
+(* Proof of equivalence with HMAC_functional_prog *)
+
+Theorem HMAC_SHA_eq : forall (m : list Z), HP.SHA256_.Hash m = SHA256_.Hash m.
+Proof.
+  intros.
+  unfold HP.SHA256_.Hash. unfold SHA256_.Hash. reflexivity.
+Qed.
+
+
+Lemma Nlist_repeat : forall {A : Type} (x : A) (n : nat),
+                       HP.HMAC_SHA256.Nlist x n = list_repeat n x.
+Proof.
+  intros A x n.
+  induction n as [ | S n'].
+  * reflexivity.
+  *
+    simpl. rewrite -> n'. reflexivity.
+Qed.
+
+
+Theorem HMAC_mkKey_eq : forall (k : list Z),
+                          HP.HMAC_SHA256.mkKey k = HMAC_SHA256.mkKey k.
+Proof.
+  intros.
+  unfold HP.HMAC_SHA256.mkKey.
+  unfold HMAC_SHA256.mkKey.
+  unfold HP.SHA256_.BlockSize.
+  unfold SHA256_.BlockSize.
+  rewrite -> HMAC_SHA_eq.
+  unfold HP.HMAC_SHA256.zeroPad.
+  unfold HMAC_SHA256.zeroPad.
+  repeat rewrite -> Nlist_repeat.
+  unfold HP.SHA256_.BlockSize.
+  unfold SHA256_.BlockSize.
+  reflexivity.
+Qed.
+
+Theorem HMAC_64_eq : forall {A : Type} (x : A),
+                       HP.HMAC_SHA256.sixtyfour x = HMAC_SHA256.sixtyfour x.
+Proof.
+  intros A x.
+  unfold HP.HMAC_SHA256.sixtyfour. unfold HMAC_SHA256.sixtyfour.
+  simpl. reflexivity.
+Qed.
+
+Lemma map_repeat : forall {A B : Type} (f : A -> B) (x : A) (n : nat),
+                     list_repeat n (f x) = map f (list_repeat n x).
+Proof.
+  intros.
+  revert A B f x.
+  induction n as [ | n'].
+  * reflexivity.
+  *
+    intros.
+    simpl.
+    rewrite -> IHn'.
+    reflexivity.
+Qed.
+  
+
+Theorem HMAC_functional_prog_Z_equiv : forall (m k : list Z),
+                                         HP.HMAC256 m k = HMAC256 m k.
+Proof.
+  intros m k.
+  unfold HMAC256.
+  unfold HMAC_SHA256.HMAC.
+
+  unfold HP.HMAC256.
+  unfold HP.HMAC_SHA256.HMAC.
+
+  unfold HMAC_SHA256.OUTER.
+  unfold HMAC_SHA256.INNER.
+  unfold HMAC_SHA256.outerArg.
+  unfold HMAC_SHA256.innerArg.
+
+  unfold HP.HMAC_SHA256.OUTER.
+  unfold HP.HMAC_SHA256.INNER.
+  unfold HP.HMAC_SHA256.outerArg.
+  unfold HP.HMAC_SHA256.innerArg.
+
+  rewrite -> HMAC_SHA_eq.
+  f_equal.
+  f_equal.
+
+  *
+    unfold HP.HMAC_SHA256.mkArgZ.
+    unfold HMAC_SHA256.mkArg.
+    unfold HP.HMAC_SHA256.mkArg.
+    rewrite -> HMAC_mkKey_eq.
+    rewrite -> HMAC_64_eq.
+    unfold HP.Opad.
+    unfold Opad.
+    rewrite -> map_map.
+    (* k is the only abstract variable here -- can it be factored out? *)
+    SearchAbout Byte.repr.
+    unfold Byte.xor.
+    SearchAbout Byte.unsigned.
+    unfold HMAC_SHA256.sixtyfour.
+    SearchAbout list_repeat.
+    rewrite -> map_repeat.
+    
+    unfold HMAC_SHA256.mkKey.
+    (* split up mkKey into a list of a certain length? *)
+    (* assume key is of the right length? *)
+
+    (* TODO does induction work? *)
+
+    (* rewrite -> Byte.unsigned_repr_eq. *)
+    (* Byte.repr and Byte.unsigned round trip *)
+
+
+    admit.
+  *
+    rewrite -> HMAC_SHA_eq.
+    f_equal.
+    f_equal.
+    (* same goal as above, TODO split into lemma *)
+    admit.
+Qed.
+
+(* ----------------- *)
+
+
 Definition HMACString (txt passwd:string): list Z :=
   HMAC256 (str_to_Z txt) (str_to_Z passwd).
 
@@ -129,3 +256,5 @@ Lemma RFC6868_exampleAUTH256_2:
   "7768617420646f2079612077616e7420666f72206e6f7468696e673f"
   "167f928588c5cc2eef8e3093caa0e87c9ff566a14794aa61648d81621a2a40c6".
 vm_compute. reflexivity. Qed.
+
+End HMAC_progZ.
