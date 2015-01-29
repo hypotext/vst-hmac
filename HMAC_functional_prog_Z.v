@@ -4,6 +4,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import List. Import ListNotations.
 Require Import HMAC_functional_prog.
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Bruteforce.
 
 Module HMAC_progZ.
 
@@ -149,6 +151,92 @@ Proof.
     reflexivity.
 Qed.
   
+Theorem combine_map : forall {A B : Type} (f : A -> B) (l1 : list A) (l2 : list A),
+                        combine (map f l1) (map f l2) =
+                        map (fun p => (f (fst p), f (snd p))) (combine l1 l2).
+Proof.
+  intros.
+  SearchAbout combine.
+  Print combine.
+  revert f l2.
+  induction l1 as [ | x1 xs1].
+  *
+    intros. reflexivity.
+  * intros.
+    revert x1 xs1 IHxs1 f.
+    induction l2 as [ | x2 xs2].
+    -
+      intros. reflexivity.
+    -
+      intros.
+      simpl.
+      f_equal.
+      apply IHxs1.
+Qed.
+
+(* TODO: Nontrivial proof *)
+
+Theorem xor_inrange : forall (x y : Z),
+                        x = x mod Byte.modulus
+                        -> y = y mod Byte.modulus
+                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
+Proof.
+  intros.
+  (* x = x mod Byte.modulus implies x in range *)
+  assert (x_inrange : 0 <= x < 10). admit.
+  assert (y_inrange : 0 <= y < 10). admit.
+  (* prove by brute force over x and y being in range *)
+  (* TODO: runs out of memory when upper bound is 256; takes a long time even at 40 *)
+  Opaque Z.lxor.
+  
+  (* doesn't work w/ omega as tactic; simpl is necessary? *)
+  do_range x_inrange simpl; do_range y_inrange reflexivity.
+Admitted.
+
+Lemma mkArgZ_mkArg_eq : forall (pad : Z) (k : list Z),
+   HP.HMAC_SHA256.mkArgZ (map Byte.repr (HP.HMAC_SHA256.mkKey k))
+     (Byte.repr pad) = HMAC_SHA256.mkArg (HMAC_SHA256.mkKey k) pad.
+Proof.
+  intros pad k.
+  unfold HP.HMAC_SHA256.mkArgZ.
+  unfold HMAC_SHA256.mkArg.
+  unfold HP.HMAC_SHA256.mkArg.
+  rewrite -> HMAC_mkKey_eq.
+  rewrite -> HMAC_64_eq.
+  rewrite -> map_map.
+  unfold Byte.xor.
+  unfold HMAC_SHA256.sixtyfour.
+  rewrite -> map_repeat.
+
+  (* Deal with Byte.repr and Byte.unsigned round trip *)
+  rewrite -> combine_map.
+  rewrite -> map_map.
+  Opaque list_repeat.
+  simpl.
+  (* unfold HMAC_SHA256.mkKey. *)
+  f_equal.
+  (* TODO: f_equal loses info that key, pad e.g. 92 in range --
+    we don't actually know key in range *)
+  apply functional_extensionality.
+  intros x.
+  destruct x.
+  simpl.
+  repeat rewrite -> Byte.unsigned_repr_eq.
+  SearchAbout Z.lxor.
+  SearchAbout (_ mod Byte.modulus).
+  SearchAbout (_ = _ mod Byte.modulus).
+
+  symmetry.
+
+  (* We know either pad (e.g. 92) is in range (info lost) *)
+  assert (z_eq : z = z mod Byte.modulus). admit.
+  (* We don't know that the resulting key is in range *)
+  assert (z0_eq : z0 = z0 mod Byte.modulus). admit.
+  rewrite <- z_eq.
+  rewrite <- z0_eq.
+  apply xor_inrange.
+  apply z_eq. apply z0_eq.
+Qed.
 
 Theorem HMAC_functional_prog_Z_equiv : forall (m k : list Z),
                                          HP.HMAC256 m k = HMAC256 m k.
@@ -175,39 +263,16 @@ Proof.
   f_equal.
 
   *
-    unfold HP.HMAC_SHA256.mkArgZ.
-    unfold HMAC_SHA256.mkArg.
-    unfold HP.HMAC_SHA256.mkArg.
-    rewrite -> HMAC_mkKey_eq.
-    rewrite -> HMAC_64_eq.
     unfold HP.Opad.
     unfold Opad.
-    rewrite -> map_map.
-    (* k is the only abstract variable here -- can it be factored out? *)
-    SearchAbout Byte.repr.
-    unfold Byte.xor.
-    SearchAbout Byte.unsigned.
-    unfold HMAC_SHA256.sixtyfour.
-    SearchAbout list_repeat.
-    rewrite -> map_repeat.
-    
-    unfold HMAC_SHA256.mkKey.
-    (* split up mkKey into a list of a certain length? *)
-    (* assume key is of the right length? *)
-
-    (* TODO does induction work? *)
-
-    (* rewrite -> Byte.unsigned_repr_eq. *)
-    (* Byte.repr and Byte.unsigned round trip *)
-
-
-    admit.
+    apply mkArgZ_mkArg_eq.
   *
     rewrite -> HMAC_SHA_eq.
     f_equal.
     f_equal.
-    (* same goal as above, TODO split into lemma *)
-    admit.
+    unfold HP.Ipad.
+    unfold Ipad.
+    apply mkArgZ_mkArg_eq.
 Qed.
 
 (* ----------------- *)
