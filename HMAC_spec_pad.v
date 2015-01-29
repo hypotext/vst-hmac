@@ -109,7 +109,7 @@ End HMAC.
 
 (* ----------------------------------------------- *)
 
-Definition c:nat := (SHA256_.DigestLength * 8)%nat.
+Definition c:nat := (HMAC_progZ.SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
 
 Definition sha_iv : Blist :=
@@ -132,7 +132,7 @@ Definition convert (l : list int) : list bool :=
 (* Neat conversion functions (TODO move rest of spec over *)
 
 (*
-Definition c := (SHA256_.DigestLength * 8)%nat.
+Definition c := (HMAC_progZ.SHA256_.DigestLength * 8)%nat.
 Definition p := (32 * 8)%nat.
 
 Definition intsToBits (l : list int) : list bool :=
@@ -203,13 +203,13 @@ Section XOR_Example.
  Transparent Byte.repr.
 
 Definition byte_to_64list (byte : byte) : list Z :=
-   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
+   map Byte.unsigned (HMAC_progZ.HMAC_SHA256.sixtyfour byte).
 
  Lemma ip_conv : convertByteBits [false; true; false; false; true; false; true; true] 210.
    repeat eexists.
  Qed.
- Lemma ipcorrect: bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP).
-   unfold ip, IP. simpl. unfold byte_to_64list, HMAC_SHA256.sixtyfour. simpl.
+ Lemma ipcorrect: bytes_bits_lists ip (HMAC_progZ.HMAC_SHA256.sixtyfour IP).
+   unfold ip, IP. simpl. unfold byte_to_64list, HMAC_progZ.HMAC_SHA256.sixtyfour. simpl.
    repeat constructor; try apply ip_conv.
   Qed.
 
@@ -218,12 +218,12 @@ Lemma ONE: convertByteBits [true; false; false; false; false; false; false; fals
 
 Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : Z),
                           ((length K) * 8)%nat = (c + p)%nat /\
-                          Zlength K = Z.of_nat SHA256_.BlockSize /\
+                          Zlength K = Z.of_nat HMAC_progZ.SHA256_.BlockSize /\
                           (* TODO: first implies this *)
                           bytes_bits_lists k K /\
-                          bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) /\
+                          bytes_bits_lists ip (HMAC_progZ.HMAC_SHA256.sixtyfour IP) /\
                           bytes_bits_lists (BLxor k ip)
-                                           ((HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP)).
+                                           ((HMAC_progZ.HMAC_SHA256.mkArg (HMAC_progZ.HMAC_SHA256.mkKey K) IP)).
 
 Proof.
   exists k, ip, K, IP. repeat split.
@@ -264,19 +264,19 @@ Qed.
 
 Lemma xor_equiv_Z : forall (xpad  : Blist) (XPAD : Z)
                                            (k : Blist) (K : list Z),
-                          bytes_bits_lists xpad (HMAC_SHA256.sixtyfour XPAD) ->
+                          bytes_bits_lists xpad (HMAC_progZ.HMAC_SHA256.sixtyfour XPAD) ->
                           ((length K) * 8)%nat = (c + p)%nat ->
-                          Zlength K = Z.of_nat SHA256_.BlockSize ->
+                          Zlength K = Z.of_nat HMAC_progZ.SHA256_.BlockSize ->
                           (* TODO: first implies this *)
                           bytes_bits_lists k K ->
                           bytes_bits_lists (BLxor k xpad)
-       (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) XPAD).
+       (HMAC_progZ.HMAC_SHA256.mkArg (HMAC_progZ.HMAC_SHA256.mkKey K) XPAD).
 Proof.
   intros xpad XPAD k K.
   intros xpad_equiv len_k zlen_k k_equiv.
-  unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkKey.
-  Opaque HMAC_SHA256.sixtyfour.
-  simpl. rewrite zlen_k. simpl. unfold HMAC_SHA256.zeroPad.
+  unfold HMAC_progZ.HMAC_SHA256.mkArg, HMAC_progZ.HMAC_SHA256.mkKey.
+  Opaque HMAC_progZ.HMAC_SHA256.sixtyfour.
+  simpl. rewrite zlen_k. simpl. unfold HMAC_progZ.HMAC_SHA256.zeroPad.
   assert (byte_key_length_blocksize: length K = 64%nat).
     * unfold p, c in *. simpl in *. omega.
   *
@@ -597,11 +597,11 @@ Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                     bytes_bits_lists bits bytes ->
                     bytes_bits_lists
                       (hash_words_padded sha_h sha_iv sha_splitandpad bits)
-                      (SHA256_.Hash bytes).
+                      (HMAC_progZ.SHA256_.Hash bytes).
 
 Proof.
   intros bits bytes input_eq.
-  unfold SHA256_.Hash.
+  unfold HMAC_progZ.SHA256_.Hash.
   rewrite -> functional_prog.SHA_256'_eq.
   unfold SHA256.SHA_256.
   unfold hash_words_padded.
@@ -680,14 +680,14 @@ Theorem HMAC_Pad_Concrete_equiv : forall
                             (K M H : list Z) (OP IP : Z)
                             (k m h : Blist) (op ip : Blist),
   ((length K) * 8)%nat = (c + p)%nat ->
-  Zlength K = Z.of_nat SHA256_.BlockSize ->
+  Zlength K = Z.of_nat HMAC_progZ.SHA256_.BlockSize ->
   (* TODO: first implies this *)
   bytes_bits_lists k K ->
   bytes_bits_lists m M ->
-  bytes_bits_lists op (HMAC_SHA256.sixtyfour OP) ->
-  bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
+  bytes_bits_lists op (HMAC_progZ.HMAC_SHA256.sixtyfour OP) ->
+  bytes_bits_lists ip (HMAC_progZ.HMAC_SHA256.sixtyfour IP) ->
   HMAC c p sha_h sha_iv sha_splitandpad op ip k m = h ->
-  HMAC_SHA256.HMAC IP OP M K = H ->
+  HMAC_progZ.HMAC_SHA256.HMAC IP OP M K = H ->
   bytes_bits_lists h H.
 Proof.
   intros K M H OP IP k m h op ip.
@@ -700,8 +700,8 @@ Proof.
 
   rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
 
-  unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
-  unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg.
+  unfold HMAC. unfold HMAC_progZ.HMAC_SHA256.HMAC. unfold HMAC_progZ.HMAC_SHA256.OUTER. unfold HMAC_progZ.HMAC_SHA256.INNER.
+  unfold HMAC_progZ.HMAC_SHA256.outerArg. unfold HMAC_progZ.HMAC_SHA256.innerArg.
 
   unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
 
@@ -722,13 +722,13 @@ Proof.
     *
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
-      pose proof bytes_bits_length op (HMAC_SHA256.sixtyfour OP) as ops_len.
+      pose proof bytes_bits_length op (HMAC_progZ.HMAC_SHA256.sixtyfour OP) as ops_len.
       rewrite -> ops_len.
       pose proof bytes_bits_length k K as keys_len.
       rewrite -> keys_len.
       rewrite -> padded_key_len.
-      Transparent HMAC_SHA256.sixtyfour.
-      unfold HMAC_SHA256.sixtyfour.
+      Transparent HMAC_progZ.HMAC_SHA256.sixtyfour.
+      unfold HMAC_progZ.HMAC_SHA256.sixtyfour.
       rewrite -> length_list_repeat.
       reflexivity.
       apply padded_keys_eq.
@@ -737,12 +737,12 @@ Proof.
     *
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
-      pose proof bytes_bits_length ip (HMAC_SHA256.sixtyfour IP) as ips_len.
+      pose proof bytes_bits_length ip (HMAC_progZ.HMAC_SHA256.sixtyfour IP) as ips_len.
       rewrite -> ips_len.
       pose proof bytes_bits_length k K as keys_len.
       rewrite -> keys_len.
       rewrite -> padded_key_len.
-      unfold HMAC_SHA256.sixtyfour.
+      unfold HMAC_progZ.HMAC_SHA256.sixtyfour.
       rewrite -> length_list_repeat.
       reflexivity.
       apply padded_keys_eq.

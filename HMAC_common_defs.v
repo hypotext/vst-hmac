@@ -37,7 +37,7 @@ Defined.
 (* TODO use neater definition with conversion functions *)
 (* TODO split out of HMAC_spec_pad *)
 
-Definition c := (SHA256_.DigestLength * 8)%nat.
+Definition c := (32 * 8)%nat.
 Definition p := (32 * 8)%nat.
 Definition b := (c + p)%nat.
 Definition BlockSize := 64.
