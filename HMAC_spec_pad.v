@@ -357,14 +357,14 @@ Qed.
 
 (* Definition of InBlocks in sha_padding_lemmas *)
 
-Lemma test : InBlocks 512 (list_repeat 512 true).
-Proof.
-  eapply list_block.
-  instantiate (1 := list_repeat 512 true).
-  - reflexivity.
-  - instantiate (1 := []). rewrite -> app_nil_r. reflexivity.
-  - apply list_nil.
-Qed.
+(* Lemma test : InBlocks 512 (list_repeat 512 true). *)
+(* Proof. *)
+(*   eapply list_block. *)
+(*   instantiate (1 := list_repeat 512 true). *)
+(*   - reflexivity. *)
+(*   - instantiate (1 := []). rewrite -> app_nil_r. reflexivity. *)
+(*   - apply list_nil. *)
+(* Qed. *)
 
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
                             bytes_bits_lists bits bytes ->
@@ -720,6 +720,7 @@ Proof.
   - assumption.
     (* xors preserve length : TODO factor this out*)
     *
+      Locate padded_keys_eq.
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
       pose proof bytes_bits_length op (HMAC_progZ.HMAC_SHA256.sixtyfour OP) as ops_len.
@@ -731,8 +732,8 @@ Proof.
       unfold HMAC_progZ.HMAC_SHA256.sixtyfour.
       rewrite -> length_list_repeat.
       reflexivity.
-      apply padded_keys_eq.
-      apply ops_eq.
+      apply padded_keys_eq.     (* given: bytes_bits_lists k K *)
+      apply ops_eq.             (* given: bytes_bits_lists op (64 OP) *)
 
     *
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.

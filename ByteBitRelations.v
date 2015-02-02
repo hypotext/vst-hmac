@@ -1,5 +1,6 @@
 Require Import List. Import ListNotations.
 Require Import Coq.ZArith.BinInt. (* Z *)
+Require Import Coq.ZArith.Zcomplements. (* Zlength *)
 Require Import XorCorrespondence. (* Blist *)
 Require Import Integers.          (* byte *)
 Require Import Coq.Numbers.Natural.Peano.NPeano.
@@ -8,6 +9,7 @@ Require Import HMAC_functional_prog_Z.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Program.Tactics.
 Require Import Bruteforce.
+Require Import sha_padding_lemmas.
 
 Open Scope Z_scope.
 
@@ -241,3 +243,108 @@ Proof.
     admit.                      (* in range *)
 Qed.
     
+(* ----------------------------- *)
+(* Relating bits to bytes *)
+
+Lemma bitsToBytes_app : forall (l m : Blist),
+                          InBlocks 8 l ->
+                          bitsToBytes (l ++ m) = bitsToBytes l ++ bitsToBytes m.
+Proof.
+  intros l m len_l. revert m.
+  induction len_l.
+  * intros. reflexivity.
+  *
+    intros m.
+    rewrite -> H0.
+    rewrite <- app_assoc.
+    destruct front as [ | x0 [| x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 ]]]]]]]];
+      inversion H.
+    unfold bitsToBytes.
+    Opaque bitsToByte.
+    simpl.
+    fold bitsToBytes.
+    apply list_nil in H2.
+    rewrite -> H2.
+    simpl.
+    rewrite -> IHlen_l.
+    reflexivity.
+Qed.
+
+Lemma bitsToBytes_len_gen : forall (l : Blist) (n : nat),
+                          length l = (n * 8)%nat ->
+                          length (bitsToBytes l) = n.
+Proof.
+  intros l n len.
+  assert (blocks : InBlocks 8 l).
+    apply InBlocks_len. rewrite -> len. exists n. reflexivity.
+  revert n len.
+  induction blocks.
+  * intros. simpl in *. omega.
+  *
+    intros n len.
+    rewrite -> H0.
+    rewrite -> bitsToBytes_app.
+    rewrite -> app_length.
+    rewrite -> H0 in len.
+    rewrite -> app_length in len.
+    rewrite -> H in len.
+
+    destruct n as [ | n'].
+    (* strange that destruct works here but not after [rewrite -> IHblocks] *)
+    - simpl in *.
+      inversion len.
+    - 
+      destruct front as [ | x0 [| x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 ]]]]]]]];
+      inversion H.
+
+      simpl.
+      apply list_nil in H2.
+      rewrite -> H2. simpl.
+      assert (minus : forall (n m : nat), n = m -> (n - 8)%nat = (m - 8)%nat).
+        intros. omega.
+      apply minus in len.
+      simpl in len.
+      assert (min_zero : forall (n : nat), (n - 0)%nat = n). intros. omega.
+      repeat rewrite -> min_zero in len.
+      clear H2 minus min_zero.
+      specialize (IHblocks n').
+      rewrite -> IHblocks.
+      reflexivity.
+      apply len.
+      -
+        apply InBlocks_len.
+        rewrite -> H. unfold NPeano.divide.
+        exists 1%nat. reflexivity.
+Qed.
+
+Lemma bitsToBytes_len : forall (l : Blist),
+                          length l = 512%nat ->
+                          Zlength (bitsToBytes l) = 64%Z.
+Proof.
+  intros l len.
+  rewrite -> Zlength_correct.
+  pose proof bitsToBytes_len_gen as len_gen.
+  specialize (len_gen l 64%nat).
+  rewrite -> len_gen.
+  - reflexivity.
+  - apply len.
+Qed.
+
+Lemma bits_bytes_bits_id : forall (l : Blist),
+                             InBlocks 8 l ->
+                             bytesToBits (bitsToBytes l) = l.
+Proof.
+  intros l len.
+  induction len.
+  - reflexivity.
+  -
+    rewrite -> H0.
+    destruct front as [ | x0 [| x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 ]]]]]]]];
+      inversion H.
+    simpl.
+    apply list_nil in H2. rewrite -> H2. simpl.
+    rewrite -> IHlen.
+    
+    destruct x0; destruct x1; destruct x2; destruct x3;
+    destruct x4; destruct x5; destruct x6; destruct x7; reflexivity.
+Qed.

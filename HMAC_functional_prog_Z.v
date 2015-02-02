@@ -91,7 +91,8 @@ Definition Opad := (* Byte.repr *) 92. (*0x5c*)
 
 Definition HMAC256 := HMAC_SHA256.HMAC Ipad Opad.
 
-(* ----------------- *)
+(* ------------------------------------------------------ *)
+
 (* Proof of equivalence with HMAC_functional_prog *)
 
 Theorem HMAC_SHA_eq : forall (m : list Z), HP.SHA256_.Hash m = SHA256_.Hash m.
@@ -173,8 +174,6 @@ Proof.
       f_equal.
       apply IHxs1.
 Qed.
-
-(* TODO: Nontrivial proof *)
 
 Theorem xor_inrange : forall (x y : Z),
                         x = x mod Byte.modulus

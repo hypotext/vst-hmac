@@ -71,38 +71,24 @@ End HMAC.
 
 End HMAC_Concat.
 
-
 Lemma h_star_eq :
   HMAC_Pad.h_star = HMAC_Concat.h_star.
 Proof. reflexivity. Qed.
 
-(* TODO add assumptions, prove, prove assumptions where used, and move to ByteBitRelations *)
-
-Lemma bitsToBytes_len : forall (l : Blist),
-                          True ->
-                          Zlength (bitsToBytes l) = BlockSize.
+Lemma list_nil : forall {A : Type} (l : list A),
+                   length l = 0%nat -> l = nil.
 Proof.
+  intros A l len.
+  induction l. reflexivity. inversion len.
+Qed.
 
-Admitted.
-
-Lemma bitsToBytes_app : forall (l m : Blist),
-                          True ->
-                          True ->
-                          bitsToBytes (l ++ m) = bitsToBytes l ++ bitsToBytes m.
+Lemma block_8 : forall (l : Blist), length l = b -> InBlocks 8 l.
 Proof.
-
-Admitted.
-
-Lemma bits_bytes_bits_id : forall (l : Blist),
-                             True ->
-                             bytesToBits (bitsToBytes l) = l.
-Proof.
-
-Admitted.
+  intros l len. apply InBlocks_len. exists 64%nat. apply len. 
+Qed.
 
 Lemma splitandpad_eq : forall (l m : Blist),
                          length l = b ->
-                         (* TODO m is InBlocks *)
                          sha_splitandpad (l ++ m) = l ++ sha_splitandpad_inc m.
 Proof.
   intros l m len.
@@ -115,25 +101,21 @@ Proof.
   rewrite -> bits_bytes_bits_id.
   rewrite <- app_assoc.
   repeat f_equal.
-  unfold c, p, b in *.
+  unfold b, c, p in *. simpl in *.
 
-  apply bitsToBytes_len.
-    admit.
-  apply bitsToBytes_len.
-    admit.
-  apply bitsToBytes_len.
-    admit.
-  admit.
-  admit.
-  admit.
+  * apply bitsToBytes_len. apply len.
+  * apply bitsToBytes_len. apply len.
+  * apply bitsToBytes_len. apply len.
+  * apply block_8. apply len.
+  * apply block_8. apply len.
 Qed.
 
 Lemma fpad_eq : forall (l m : Blist),
                   length l = b ->
-                  (* TODO m is in blocks *)
+                  InBlocks 8 m ->
                   sha_splitandpad (l ++ m) = l ++ HMAC_Concat.app_fpad fpad m.
 Proof.
-  intros l m len.
+  intros l m len len_m.
   unfold HMAC_Concat.app_fpad.
   unfold sha_splitandpad. unfold fpad.
   unfold pad. unfold fpad_inner.
@@ -145,24 +127,43 @@ Proof.
   rewrite -> common_lemmas.Zlength_app.
   repeat f_equal.
 
-  apply bitsToBytes_len.
-    admit.
-  apply bitsToBytes_len.
-    admit.
-  apply bitsToBytes_len.
-    admit.
-  admit.
-  admit.
-  admit.
-  admit.
+  * apply bitsToBytes_len. apply len.
+  * apply bitsToBytes_len. apply len.
+  * apply bitsToBytes_len. apply len.
+  * apply len_m.
+  * apply block_8. apply len.
+  * apply block_8. apply len.
 Qed. 
 
+Lemma BLxor_length : forall (l1 l2 : Blist) (n : nat),
+                       length l1 = n ->
+                       length l2 = n ->
+                       length (BLxor l1 l2) = n.
+Proof.
+  intros l1 l2 n len1 len2.
+  revert l1 l2 len1 len2.
+  induction n as [ | n'].
+  - intros. apply list_nil in len1. apply list_nil in len2.
+    subst. reflexivity.
+  - intros l1 l2 len1 len2.
+    destruct l1; destruct l2; inversion len1; inversion len2.
+    simpl.
+    rewrite -> map_length.
+    rewrite -> combine_length.
+    rewrite H0. rewrite H1. simpl.
+    f_equal.
+    apply min_l.
+    omega.
+Qed.
+
 Theorem HMAC_concat_pad : forall (k m : Blist) (op ip : Blist),
-                            (* TODO length guarantees on k, ip, and op *)
+                            length k = b ->
+                            length ip = b ->
+                            length op = b -> 
   HMAC_Pad.HMAC c p sha_h sha_iv sha_splitandpad op ip k m =
   HMAC_Concat.HMAC c p sha_h sha_iv sha_splitandpad_inc fpad op ip k m.
 Proof.
-  intros k m op ip.
+  intros k m op ip len_k len_ip len_op.
   unfold c, p in *. simpl in *.
   unfold HMAC_Pad.HMAC. unfold HMAC_Concat.HMAC.
   unfold HMAC_Pad.HMAC_2K. unfold HMAC_Concat.HMAC_2K.
@@ -178,14 +179,25 @@ Proof.
   f_equal.
 
   rewrite <- splitandpad_eq.
-  rewrite <- fpad_eq.
+  Check fpad_eq.
+  rewrite <- fpad_eq.           (* wants the InBlocks 8 *)
   reflexivity.
 
-(* TODO split out lemma that BLxor preserves length given 2 of block size *)
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
+  * apply BLxor_length. apply len_k. apply len_op.
+  *
+    unfold HMAC_Concat.h_star.
+    Print intsToBits.
+    rewrite -> hash_blocks_bits_equation.
+    unfold sha_h.
+    Check common_lemmas.length_hash_block.
+    Check hash_blocks_bits_equation.
+    Print sha_h.
+    SearchAbout hash_blocks.
+    Check pure_lemmas.length_hash_blocks.
+    admit.
+  * apply BLxor_length. apply len_k. apply len_ip.
+  * apply BLxor_length. apply len_k. apply len_op.
+  * apply BLxor_length. apply len_k. apply len_ip.
+  * apply BLxor_length. apply len_k. apply len_op.
+  * apply BLxor_length. apply len_k. apply len_ip.
 Qed.
