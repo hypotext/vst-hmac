@@ -40,11 +40,12 @@ Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
                    InBlocks n full. 
 
 (* ----------------- ^ Definitions *)
-
+(*
 Check NPeano.divide.
 Print NPeano.divide.
 Check list_repeat.
 Print list_repeat.
+*)
 
 Lemma fstpad_len :
   forall (msg : list Z),
@@ -101,11 +102,11 @@ Proof.
 
 Admitted.
 
-
+(*
 Print NPeano.div.
 Print NPeano.divide.
 SearchAbout NPeano.divide.
-
+*)
 
 
 (* TODO: clear out the SearchAbouts / clean up proof *)

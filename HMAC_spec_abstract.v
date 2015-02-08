@@ -135,46 +135,140 @@ functions: h, splitAndPad, fpad
 -----
 
 This should be informally equal to HMAC_Abstract, though I don't think there is a formal way to do and check module equivalence in Coq. *)
+SearchAbout Vector.t. 
 
+Lemma VectorToList_cons A n: forall (a:A) l,
+      Vector.to_list (Vector.cons A a n l) =
+      cons a (Vector.to_list l).
+Proof. intros. reflexivity. Qed. 
+
+Lemma VectorToList_combine A n: forall (a:A) b v1 v2,
+     combine (Vector.to_list (Vector.cons A a n v1))
+             (Vector.to_list (Vector.cons A b n v2))
+   = (a,b) :: combine (Vector.to_list v1) (Vector.to_list v2).
+Proof. intros. simpl. f_equal. Qed.
+   
+
+Theorem xor_eq' : forall (n : nat) (v1 v2 : Bvector n),
+                   BLxor (Vector.to_list v1) (Vector.to_list v2) = 
+                   Vector.to_list (BVxor n v1 v2).
+Proof.
+  eapply Vector.rect2.
+  reflexivity.
+  intros. simpl. rewrite (VectorToList_cons (xorb a b)).
+   rewrite <- H. clear H. unfold BLxor. 
+   rewrite VectorToList_combine. reflexivity.
+Qed. 
 
 Theorem xor_eq : forall (n : nat) (v1 v2 : Bvector n) (l1 l2 : Blist),
                    l1 = Vector.to_list v1 ->
                    l2 = Vector.to_list v2 ->
                    BLxor l1 l2 = Vector.to_list (BVxor n v1 v2).
-Proof.
-  intros n v1 v2 l1 l2 vl1_eq vl2_eq.
-  rewrite vl1_eq. rewrite vl2_eq.
-  unfold BLxor.
-  unfold BVxor.
-  SearchAbout Vector.map2.
+Proof. intros; subst. apply xor_eq'. Qed.
 
-  induction n as [ | n'].
-  *
-    SearchAbout Vector.t 0.
-    assert (v1 = Bnil). admit.
-    assert (v2 = Bnil). admit.
-    subst.
-    simpl.
-    reflexivity.
-  *
-    admit.
-    (* not sure if normal induction will work for Bvector n *)
+Theorem app_eq' : forall (m:nat) (v2:Bvector m) (n : nat) (v1 : Bvector n),
+                   (Vector.to_list v1) ++ (Vector.to_list v2) = 
+                   Vector.to_list (Vector.append v1 v2).
+Proof. intros m v2.
+  eapply Vector.t_rec.
+  reflexivity.
+  intros. simpl. rewrite (VectorToList_cons h). f_equal. rewrite <- H. f_equal.
 Qed.
 
-SearchAbout Vector.append.
-
-Theorem app_eq : forall (n : nat) (v1 v2 : Bvector n) (l1 l2 : Blist),
-                   l1 = Vector.to_list v1 ->
-                   l2 = Vector.to_list v2 ->
-                   l1 ++ l2 = Vector.to_list (Vector.append v1 v2).
+Theorem app_eq : forall (n : nat) (v1 v2 : Bvector n),
+                   (Vector.to_list v1) ++ (Vector.to_list v2) = 
+                   Vector.to_list (Vector.append v1 v2).
 Proof.
-  intros n v1 v2 l1 l2 vl1_eq vl2_eq.
-  subst.
-  unfold Vector.append.
+  intros. apply app_eq'.
+Qed. (*
+Check HMAC_Abstract.splitVector.
+Definition sV (n m k:nat) (NM: k = n+m) (v:Bvector k) : Bvector n * Bvector m.
+ subst k.
+ apply (@HMAC_Abstract.splitVector bool n m v).
+Defined.
+Definition myP: forall (k : nat) (v:Vector.t bool k), Type.
+intros.
+apply (forall n m (NM: k=n+m), 
+                   splitList n (Vector.to_list v) = match sV _ _ NM v with (L,R) =>
+                     (Vector.to_list L,
+                      Vector.to_list R) end).
+Defined.
+
+Theorem split_eq : forall (k : nat) (v : Bvector k) n m (NM:k=n+m),
+                   splitList n (Vector.to_list v) = match sV _ _ NM v with (L,R) =>
+                     (Vector.to_list L,
+                      Vector.to_list R) end.
+Proof. intros n m.
+ apply (Vector.t_rect bool myP); unfold myP, sV; intros.
+   assert (n0 = 0 /\ m0 = 0). eapply plus_is_O. rewrite <- NM; trivial.
+   destruct H. subst n0 m0. simpl. unfold eq_rec_r, eq_rec, eq_rect. simpl.
+    remember (eq_sym NM). destruct e. in (_ = y) return (Bvector y -> Bvector 0 * Bvector 0)). 
+   simpl. 
+  apply H.
+ Check (@Vector.t_rec bool). eapply (@Vector.t_rec bool).
+Print Vector.
+ intros k v.
+  eapply Vector.t_rec. 3: eassumption.
+  intros n. induction n. reflexivity. 
+  unfold Bvector. 
+  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
+apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
+Print splitList.
+Theorem split_eq : forall (k : nat) (v : Bvector k) n m (NM:k=n+m) (v1: Bvector n),
+                   splitList n (Vector.to_list v) =
+                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v1)),
+                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v2))).
+Proof.
+  intros n. induction n. reflexivity. 
+  unfold Bvector. 
+  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
+apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
+Print splitList.
+
+Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
+                   splitList n (Vector.to_list v) =
+                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v)),
+                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v))).
+Proof.
+  intros n. induction n. reflexivity. 
+  unfold Bvector. 
+  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
+apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
+Print splitList.
+Lemma X {A}: forall n (l:list A), 
+  splitList (S n) l = match splitList n l with (x,y::t) => (x ++ (y::nil), t) | _ => end.
+  unfold splitList.
+  apply Vector.t_rec. simpl. reflexivity.
+  Defintion myP: forall k, Bvector k -> 
+Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
+                   splitList n (Vector.to_list v) =
+                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v)),
+                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v))).
+Proof.
+  intros n m v. 
+  eapply (Vector.t_rec bool). Focus 3.
+  split.
+  * 
+    unfold splitList.
+    unfold HMAC_Abstract.splitVector.
+    simpl.
 
 Admitted.
-Check HMAC_Abstract.splitVector.
+Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
+                     fst (splitList n (Vector.to_list v)) =
+                     Vector.to_list (fst (HMAC_Abstract.splitVector n m v))
+                     /\
+                     snd (splitList n (Vector.to_list v)) =
+                     Vector.to_list (snd (HMAC_Abstract.splitVector n m v)).
+Proof.
+  intros n m v l vl_eq.
+  split.
+  * 
+    unfold splitList.
+    unfold HMAC_Abstract.splitVector.
+    simpl.
 
+Admitted.*)
 Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)) (l : Blist),
                      l = Vector.to_list v ->
                      fst (splitList n l) =
@@ -214,11 +308,8 @@ Lemma app_fpad_eq : forall (v : Bvector c) (l : Blist),
 Proof.
   intros v l inputs_eq.
   subst.
-  unfold HMAC_List.app_fpad. unfold HMAC_Abstract.app_fpad.
-  apply app_eq.
-  *  reflexivity.
-  *  apply fpad_eq.
-     reflexivity.
+  unfold HMAC_List.app_fpad. unfold HMAC_Abstract.app_fpad. 
+  rewrite <- app_eq. erewrite fpad_eq; reflexivity. 
 Qed.     
 
 (* iv *)
@@ -291,8 +382,8 @@ Proof.
 
   apply hash_words_eq.
   
-  * admit.                      (* xor preserves lengths -- ok *)
-  * admit.
+  * admit. (*goal: length (BLxor kl op) = HMAC_List.b c p)*) (* xor preserves lengths -- ok *)
+  * admit. (*goal: length (BLxor kl ip) = HMAC_List.b c p) *)
 
 Qed.  
 
