@@ -7,6 +7,7 @@ Require Import HMAC_common_defs.
 Require Import Arith.
 Require Import HMAC_spec_concat.
 Require Import ByteBitRelations.
+Require Import sha_padding_lemmas.
 
 Module HMAC_List.
 
@@ -69,20 +70,26 @@ End HMAC_List.
 Require Import SHA256.
 
 Function toBlocks (l : Blist) {measure length l} : list Blist :=
-  if leb (length l) 512 then nil
-  else firstn 512 l :: toBlocks (skipn 512 l).
+  match l with
+    | nil => nil
+    | _ :: _ => firstn 512 l :: toBlocks (skipn 512 l)
+  end.
 Proof.
-  intros l le.
-  rewrite -> skipn_length.
-  * 
-    (* assert (forall (x y z : nat), x >= 0 -> z > 0 -> x - z < x). intros. omega. *)
-    (* apply H. *)
-    admit.
-  *
-    SearchAbout leb.
-    (* rewrite -> leb_complete_conv in le. *)
-    admit.
-Qed.    
+  intros.
+  assert (skip : length (skipn 512 (b :: l0)) <= length l0).
+  
+  unfold skipn.
+  SearchAbout skipn.
+    
+  (* rewrite -> skipn_length. *)
+  (* assert (Hlen : forall {A : Type} (l : list A), length l >= 0%nat). *)
+  (*     intros. destruct l0; simpl. omega. omega. *)
+  (* specialize (Hlen bool (b :: l0)). *)
+  (* destruct Hlen. *)
+  (* simpl. *)
+  
+  
+Admitted.
 
 Definition sha_splitandpad_blocks (msg : Blist) : list Blist :=
   toBlocks (sha_splitandpad_inc msg).
@@ -90,102 +97,105 @@ Definition sha_splitandpad_blocks (msg : Blist) : list Blist :=
 Definition sha_splitandpad_inc' (msg : Blist) : Blist :=
   concat (sha_splitandpad_blocks msg).
 
+(* TODO can use either toBlocks or toBlocks' *)
 Lemma concat_toBlocks_id : forall (l : Blist),
-                             (* TODO: iff InBlocks l (define toBlocks such that this is true) *)
-                             True ->
+                             InBlocks 512 l ->
                              concat (toBlocks l) = l.
 Proof.
   intros l len.
   unfold concat.
-  
-Admitted.
+  induction len.
+
+  * rewrite -> toBlocks_equation. reflexivity.
+  *
+    rewrite -> toBlocks_equation.
+    rewrite -> H0.
+    rewrite -> firstn_exact. rewrite -> skipn_exact.
+    rewrite -> length_not_emp.
+    simpl.
+    rewrite -> IHlen.
+    unfold id.
+    reflexivity.
+  -
+    rewrite -> app_length. rewrite -> H. omega.
+  - apply H.
+  - apply H.
+Qed.
 
 (* since sha_splitandpad_inc is used instead of the modified version in the Concat-Pad proof *)
+(* TODO: go through and verify that all the proofs chain *)
 Lemma sha_splitandpad_inc_eq : forall (msg : Blist),
-                                 True ->
                                  sha_splitandpad_inc msg = sha_splitandpad_inc' msg.
 Proof.
-  intros msg msg_blocks.
+  intros msg.
   unfold sha_splitandpad_inc'. unfold sha_splitandpad_blocks.
   symmetry.
   apply concat_toBlocks_id.
-  apply msg_blocks.
+  *
+    (* InBlocks 512 (sha_splitandpad_inc msg) *)
+    admit.
+
 Qed.  
 
-(* This statement may not be quite right for induction (l ::, l ++) *)
+Lemma len_min : forall {A : Type} (l : list A), length l >= 0%nat.
+Proof. intros. destruct l; simpl. omega. omega. Qed.
+
+Theorem fold_hash_blocks_eq_ind : forall (l : list Blist) (iv : Blist),
+                                    Forall (fun x => length x = 512%nat) l ->
+                                    fold_left sha_h l iv =
+                                    hash_blocks_bits sha_h iv (concat l).
+Proof.
+  intros l.
+  induction l as [ | l ls]; intros iv len_l.
+
+  * simpl. reflexivity.
+  *
+    rewrite -> Forall_forall in len_l.
+    Opaque firstn. Opaque skipn.  simpl.
+    unfold id.
+    rewrite hash_blocks_bits_equation.    
+    rewrite -> firstn_exact. rewrite -> skipn_exact.
+    rewrite -> length_not_emp.
+    apply IHls.
+    apply Forall_forall; intros.
+    apply len_l.
+    apply in_cons.
+    apply H.
+    
+  -
+    rewrite -> app_length.
+    assert (length l = 512%nat). apply len_l. unfold In. auto.
+    rewrite -> H.
+    specialize (len_min ls).
+    omega.
+
+  - apply len_l. unfold In. auto.
+
+  - apply len_l. unfold In. auto.
+Qed.
+
 Theorem fold_hash_blocks_eq : forall (l : Blist) (ls : list Blist),
-                                length l = b ->
-                                (* TODO InBlocks ls *)
-                                True ->
+                                length l = 512%nat ->
+                                Forall (fun x => length x = 512%nat) ls ->
                                 fold_left sha_h (l :: ls) sha_iv =
                                 hash_blocks_bits sha_h sha_iv (l ++ concat ls).
 Proof.
   intros l ls len_l len_ls.
+  pose proof fold_hash_blocks_eq_ind as fold_ind.
   simpl.
-  rewrite -> hash_blocks_bits_equation.
-
-  unfold b in *. 
+  rewrite hash_blocks_bits_equation.    
+  rewrite -> firstn_exact. rewrite -> skipn_exact.
   rewrite -> length_not_emp.
+  apply fold_ind.
+  * apply len_ls.
   *
-    rewrite -> firstn_exact.
-    rewrite -> skipn_exact.
-
-    SearchAbout fold_left.
-
-    (* TODO may need to write with fold_right, + hash_blocks_bits with "fold_right" version
-       (to blocks, reverse, concat) *)
-
-    (* No induction hypothesis... *)
-    unfold fold_left.
-    rewrite -> hash_blocks_bits_equation.
-
-    (* Show that folding left over a list of blocks is the same as concating the
-     list of blocks, then doing a "manual" left fold with firstn and skipn *)
-    
-    admit.
-    - apply len_l.
-    - apply len_l.
-  *
-    rewrite app_length.
-    rewrite -> len_l.
-    unfold c, p in *.
+    rewrite -> app_length.
+    rewrite len_l.
+    specialize (len_min ls).
     omega.
+  * apply len_l.
+  * apply len_l.
 Qed.
-
-Theorem fold_hash_blocks_eq_ind : forall (l : list Blist),
-                                (* length l = b -> *)
-                                (* TODO InBlocks l *)
-                                True ->
-                                fold_left sha_h l sha_iv =
-                                hash_blocks_bits sha_h sha_iv (concat l).
-Proof.
-  intros l len_l.
-  simpl.
-  rewrite -> hash_blocks_bits_equation.
-
-  (* due to BLxor k ip/op *)
-  rewrite -> length_not_emp.
-  induction l as [ | l ls].
-  * simpl. rewrite -> hash_blocks_bits_equation. unfold sha_h.
-    unfold bitsToInts.          (* why is this base case different from above? *)
-   (* is this true? *)
-    admit.
-  *
-    rewrite <- fold_left_rev_right.
-    rewrite <- fold_left_rev_right in IHls.
-    (* not very useful due to (rev ls ++ [l]) *)
-    Opaque firstn. Opaque skipn.  simpl.
-    unfold id.
-    rewrite -> firstn_exact. rewrite -> skipn_exact.
-    
-   (* can't use IHls due to fold_left/fold_right *)
-   (* TODO may need to write with fold_right, + hash_blocks_bits with "fold_right" version
-       (to blocks, reverse, concat) *)
-    SearchAbout fold_left.
-    
-    
-
-Admitted.
 
 Lemma fpad_list_concat_eq :
   HMAC_List.app_fpad = HMAC_Concat.app_fpad.
@@ -215,7 +225,7 @@ Proof.
   unfold HMAC_Concat.h_star.
 
   unfold sha_splitandpad_inc'.
-  Check fold_hash_blocks_eq.
+  (* Check fold_hash_blocks_eq. *)
   rewrite <- fold_hash_blocks_eq. (* important *)
   assert (forall (l1 l2 : Blist), l1 ++ l2 = l1 ++ concat (l2 :: nil)) as create_concat.
     intros. unfold concat. simpl.
@@ -226,9 +236,14 @@ Proof.
   reflexivity.
 
   * apply BLxor_length. apply k_len. apply op_len.
-  * admit.
+  * unfold HMAC_Concat.app_fpad.
+    unfold fpad.
+    admit.
   * apply BLxor_length. apply k_len. apply ip_len.
-  * admit.
+  * 
+  (*  Forall (fun x : list bool => length x = 512%nat)
+     (sha_splitandpad_blocks m) *)
+    admit.
   * apply BLxor_length. apply k_len. apply op_len.
   * apply BLxor_length. apply k_len. apply ip_len.
   * apply BLxor_length. apply k_len. apply op_len.
