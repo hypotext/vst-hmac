@@ -80,6 +80,34 @@ Definition fpad (msg : Blist) : Blist :=
 
 (* --------------- *)
 
+Lemma list_nil : forall {A : Type} (l : list A),
+                   length l = 0%nat -> l = nil.
+Proof.
+  intros A l len.
+  induction l. reflexivity. inversion len.
+Qed.
+
+Lemma BLxor_length : forall (l1 l2 : Blist) (n : nat),
+                       length l1 = n ->
+                       length l2 = n ->
+                       length (BLxor l1 l2) = n.
+Proof.
+  intros l1 l2 n len1 len2.
+  revert l1 l2 len1 len2.
+  induction n as [ | n'].
+  - intros. apply list_nil in len1. apply list_nil in len2.
+    subst. reflexivity.
+  - intros l1 l2 len1 len2.
+    destruct l1; destruct l2; inversion len1; inversion len2.
+    simpl.
+    rewrite -> map_length.
+    rewrite -> combine_length.
+    rewrite H0. rewrite H1. simpl.
+    f_equal.
+    apply min_l.
+    omega.
+Qed.
+
 Lemma firstn_exact : 
   forall {A : Type} (l1 l2 : list A) (n : nat),
     (length l1 = n)%nat -> firstn n (l1 ++ l2) = l1.

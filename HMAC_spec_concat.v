@@ -75,13 +75,6 @@ Lemma h_star_eq :
   HMAC_Pad.h_star = HMAC_Concat.h_star.
 Proof. reflexivity. Qed.
 
-Lemma list_nil : forall {A : Type} (l : list A),
-                   length l = 0%nat -> l = nil.
-Proof.
-  intros A l len.
-  induction l. reflexivity. inversion len.
-Qed.
-
 Lemma block_8 : forall (l : Blist), length l = b -> InBlocks 8 l.
 Proof.
   intros l len. apply InBlocks_len. exists 64%nat. apply len. 
@@ -134,27 +127,6 @@ Proof.
   * apply block_8. apply len.
   * apply block_8. apply len.
 Qed. 
-
-Lemma BLxor_length : forall (l1 l2 : Blist) (n : nat),
-                       length l1 = n ->
-                       length l2 = n ->
-                       length (BLxor l1 l2) = n.
-Proof.
-  intros l1 l2 n len1 len2.
-  revert l1 l2 len1 len2.
-  induction n as [ | n'].
-  - intros. apply list_nil in len1. apply list_nil in len2.
-    subst. reflexivity.
-  - intros l1 l2 len1 len2.
-    destruct l1; destruct l2; inversion len1; inversion len2.
-    simpl.
-    rewrite -> map_length.
-    rewrite -> combine_length.
-    rewrite H0. rewrite H1. simpl.
-    f_equal.
-    apply min_l.
-    omega.
-Qed.
 
 Theorem HMAC_concat_pad : forall (k m : Blist) (op ip : Blist),
                             length k = b ->

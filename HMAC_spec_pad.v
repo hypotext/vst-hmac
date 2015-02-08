@@ -720,7 +720,7 @@ Proof.
   - assumption.
     (* xors preserve length : TODO factor this out*)
     *
-      Locate padded_keys_eq.
+      (* Locate padded_keys_eq. *)
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
       pose proof bytes_bits_length op (HMAC_progZ.HMAC_SHA256.sixtyfour OP) as ops_len.

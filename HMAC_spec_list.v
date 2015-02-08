@@ -112,6 +112,7 @@ Proof.
   apply msg_blocks.
 Qed.  
 
+(* This statement may not be quite right for induction (l ::, l ++) *)
 Theorem fold_hash_blocks_eq : forall (l : Blist) (ls : list Blist),
                                 length l = b ->
                                 (* TODO InBlocks ls *)
@@ -133,6 +134,14 @@ Proof.
 
     (* TODO may need to write with fold_right, + hash_blocks_bits with "fold_right" version
        (to blocks, reverse, concat) *)
+
+    (* No induction hypothesis... *)
+    unfold fold_left.
+    rewrite -> hash_blocks_bits_equation.
+
+    (* Show that folding left over a list of blocks is the same as concating the
+     list of blocks, then doing a "manual" left fold with firstn and skipn *)
+    
     admit.
     - apply len_l.
     - apply len_l.
@@ -143,17 +152,53 @@ Proof.
     omega.
 Qed.
 
+Theorem fold_hash_blocks_eq_ind : forall (l : list Blist),
+                                (* length l = b -> *)
+                                (* TODO InBlocks l *)
+                                True ->
+                                fold_left sha_h l sha_iv =
+                                hash_blocks_bits sha_h sha_iv (concat l).
+Proof.
+  intros l len_l.
+  simpl.
+  rewrite -> hash_blocks_bits_equation.
+
+  (* due to BLxor k ip/op *)
+  rewrite -> length_not_emp.
+  induction l as [ | l ls].
+  * simpl. rewrite -> hash_blocks_bits_equation. unfold sha_h.
+    unfold bitsToInts.          (* why is this base case different from above? *)
+   (* is this true? *)
+    admit.
+  *
+    rewrite <- fold_left_rev_right.
+    rewrite <- fold_left_rev_right in IHls.
+    (* not very useful due to (rev ls ++ [l]) *)
+    Opaque firstn. Opaque skipn.  simpl.
+    unfold id.
+    rewrite -> firstn_exact. rewrite -> skipn_exact.
+    
+   (* can't use IHls due to fold_left/fold_right *)
+   (* TODO may need to write with fold_right, + hash_blocks_bits with "fold_right" version
+       (to blocks, reverse, concat) *)
+    SearchAbout fold_left.
+    
+    
+
+Admitted.
+
 Lemma fpad_list_concat_eq :
   HMAC_List.app_fpad = HMAC_Concat.app_fpad.
 Proof. reflexivity. Qed.
 
 Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
-                             (* assumptions on lengths of k, m, op, ip *)
+                             (* assumption on length m? TODO *)
+                             length k = b ->
                              True ->
-                             True ->
-                             True ->
-                             True ->
+                             length op = b ->
+                             length ip = b ->
   HMAC_List.HMAC c p sha_h sha_iv sha_splitandpad_blocks fpad op ip k m =
+  (* Note use of sha_splitandpad_blocks and sha_splitandpad_inc' (= concat the blocks) *)
   HMAC_Concat.HMAC c p sha_h sha_iv sha_splitandpad_inc' fpad op ip k m.
 Proof.
   intros k m op ip k_len m_len op_len ip_len.
@@ -170,22 +215,22 @@ Proof.
   unfold HMAC_Concat.h_star.
 
   unfold sha_splitandpad_inc'.
-  rewrite <- fold_hash_blocks_eq.
+  Check fold_hash_blocks_eq.
+  rewrite <- fold_hash_blocks_eq. (* important *)
   assert (forall (l1 l2 : Blist), l1 ++ l2 = l1 ++ concat (l2 :: nil)) as create_concat.
     intros. unfold concat. simpl.
     rewrite -> app_nil_r. reflexivity.
 
   rewrite -> create_concat.
-  rewrite <- fold_hash_blocks_eq.
+  rewrite <- fold_hash_blocks_eq. (* again *)
   reflexivity.
 
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
+  * apply BLxor_length. apply k_len. apply op_len.
+  * admit.
+  * apply BLxor_length. apply k_len. apply ip_len.
+  * admit.
+  * apply BLxor_length. apply k_len. apply op_len.
+  * apply BLxor_length. apply k_len. apply ip_len.
+  * apply BLxor_length. apply k_len. apply op_len.
+  * apply BLxor_length. apply k_len. apply ip_len.
 Qed.  
-

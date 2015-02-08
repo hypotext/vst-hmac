@@ -246,6 +246,13 @@ Qed.
 (* ----------------------------- *)
 (* Relating bits to bytes *)
 
+Lemma list_nil : forall {A : Type} (l : list A),
+                   length l = 0%nat -> l = nil.
+Proof.
+  intros A l len.
+  induction l. reflexivity. inversion len.
+Qed.
+
 Lemma bitsToBytes_app : forall (l m : Blist),
                           InBlocks 8 l ->
                           bitsToBytes (l ++ m) = bitsToBytes l ++ bitsToBytes m.
