@@ -5,6 +5,16 @@ Require Import Integers.
 Require Import SHA256.
 Require Import functional_prog.
 
+Lemma list_splitLength {A}: forall n (l:list A) m, 
+      length l = (n + m)%nat -> exists l1 l2, l = l1 ++ l2 /\ length l1 = n /\ length l2 = m.
+Proof. intros n.
+  induction n; simpl; intros.
+  exists [], l; eauto.
+  destruct l; simpl in H; inversion H. clear H.
+  destruct (IHn _ _ H1) as [l1 [l2 [L [L1 L2]]]]. clear IHn H1. subst.
+  exists (a :: l1), l2; auto.
+Qed.
+
 (* Lemma 1: M = Prefix(Pad(M)) *)
 
 Inductive Prefix {X : Type} : list X -> list X -> Prop :=
@@ -88,26 +98,16 @@ Qed.
 
 Lemma InBlocks_len : forall {A : Type} (l : list A) (n : nat),
                        NPeano.divide (n) (length l) -> InBlocks n l.
-Proof.
+Proof. 
   intros A l n div.
   destruct div.
   revert A l n H.
   induction x; intros; simpl in *.
-  -
-    admit.
-  -
-    Print InBlocks.
-
-    (* apply list_block. *)
-
-Admitted.
-
-(*
-Print NPeano.div.
-Print NPeano.divide.
-SearchAbout NPeano.divide.
-*)
-
+  - destruct l; simpl in *. constructor. inversion H.
+  - destruct (list_splitLength _ _ _ H) as [l1 [l2 [L [L1 L2]]]]. clear H; subst.
+    apply IHx in L2. clear IHx. 
+    apply (list_block _ l1 l2); trivial.
+Qed. 
 
 (* TODO: clear out the SearchAbouts / clean up proof *)
 Lemma pad_len_64_mod : forall (msg : list Z), 

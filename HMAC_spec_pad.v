@@ -366,6 +366,72 @@ Qed.
 (*   - apply list_nil. *)
 (* Qed. *)
 
+Lemma bitsToByte_cons: forall bits h t, (h::t) = bitsToBytes bits -> 
+      exists b0, exists b1, exists b2, exists b3, 
+      exists b4, exists b5, exists b6, exists b7, exists xs,
+      bits = b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs /\
+      h = bitsToByte [b0, b1, b2, b3, b4, b5, b6, b7] /\
+      t = bitsToBytes xs.
+Proof. intros.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits. inv H.
+  destruct bits; inv H.
+  eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists.
+  split. reflexivity.
+  split; reflexivity.
+Qed.
+
+Lemma bitsToByte_isbyteZ b0 b1 b2 b3 b4 b5 b6 b7:
+      isbyteZ (bitsToByte [b0, b1, b2, b3, b4, b5, b6, b7]).
+Proof. simpl. unfold asZ, isbyteZ.
+  destruct b0; destruct b1; destruct b2; destruct b3;
+  destruct b4; destruct b5; destruct b6; destruct b7; simpl; omega.
+Qed.
+
+Lemma bitsToBytes_isbyteZ: forall bytes bits, bytes = bitsToBytes bits -> Forall isbyteZ bytes.
+Proof. intros bytes.
+  induction bytes; simpl; intros.
+     constructor.
+  apply bitsToByte_cons in H.
+  destruct H as [b0 [b1 [b2 [b3 [b4 [b5 [b6 [b7 [xs [BITS [A BYTES]]]]]]]]]]].
+  constructor.
+     subst. apply bitsToByte_isbyteZ.
+     eauto. 
+Qed.
+
+Lemma convertByteBits_isbyteZ b0 b1 b2 b3 b4 b5 b6 b7 byte:
+      convertByteBits [b0, b1, b2, b3, b4, b5, b6, b7] byte ->
+      isbyteZ byte.
+Proof. intros.
+  destruct H as [b8 [b9 [b10 [b11 [b12 [b13 [b14 [b15 [BITS ZZ]]]]]]]]].
+  inversion BITS. subst. clear BITS.
+  unfold asZ, isbyteZ.
+  destruct b8; destruct b9; destruct b10; destruct b11;
+  destruct b12; destruct b13; destruct b14; destruct b15; simpl; omega.
+Qed.
+
+Lemma bytesBitsLists_isbyteZ bytes bits: bytes_bits_lists bits bytes -> Forall isbyteZ bytes.
+Proof. intros.
+  induction H. constructor.
+  constructor; trivial. eapply convertByteBits_isbyteZ. apply H0. 
+Qed.
+
+Lemma pad_isbyteZ: forall l, Forall isbyteZ l -> Forall isbyteZ (pad l).
+Proof. intros. unfold pad.
+  apply pure_lemmas.Forall_app.
+  split; trivial.
+  apply pure_lemmas.Forall_app.
+  split. constructor. unfold isbyteZ; omega. constructor. 
+  apply pure_lemmas.Forall_app.
+  split. apply pure_lemmas.Forall_list_repeat. unfold isbyteZ; omega.
+  apply pure_lemmas.isbyte_intlist_to_Zlist.
+Qed.  
+
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
                             bytes_bits_lists bits bytes ->
                             bytes_bits_lists
@@ -375,14 +441,15 @@ Proof.
   intros bits bytes inputs_eq.
   unfold concat.
   unfold sha_splitandpad.
+  specialize (bytesBitsLists_isbyteZ inputs_eq). intros isbyteZ_Bytes.
 
-  apply bytes_bits_ind_comp in inputs_eq.
+  apply bytes_bits_ind_comp in inputs_eq. 2: apply isbyteZ_Bytes.
   rewrite inputs_eq.
   apply bytes_bits_def_eq.
-  admit.                        (* padding preserves in-range *)
-  admit.
+  rewrite <- inputs_eq. apply pad_isbyteZ. trivial.
 Qed.
 
+(*Lennart: I thionk we need another asummption here: Forall isbyteZ bytes*)
 Lemma hash_block_equiv :
   forall (bits : Blist) (bytes : list Z)
          (regs : Blist) (REGS : SHA256.registers),
@@ -408,7 +475,8 @@ Proof.
   rewrite -> bytes_bits_bytes_id.
   rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
   reflexivity.
-  admit. admit.                 (* intlist_to_Zlist preserves in-range *)
+  admit.
+  apply pure_lemmas.isbyte_intlist_to_Zlist. 
 Qed.
 
 (* front/back equivalence theorems: stuck *)
@@ -619,7 +687,7 @@ Proof.
 
       apply bytes_bits_comp_ind.
       pose proof fold_equiv_blocks as fold_equiv_blocks.
-      admit.
+      apply pure_lemmas.isbyte_intlist_to_Zlist. 
       (* TODO: in-range preserved by hash_blocks and intlist_to_Zlist *)
       apply fold_equiv_blocks.
       *                         (* padding -> blocks of 512 *)
@@ -656,7 +724,7 @@ Proof.
         apply bytes_bits_ind_comp in input_eq.
         rewrite -> input_eq.
         reflexivity.
-        + admit.                (* bytes in range *)
+        + eapply bytesBitsLists_isbyteZ. eassumption.
         +
           pose proof pad_len_64_nat bytes as pad_len_64.
           destruct pad_len_64.
@@ -665,7 +733,7 @@ Proof.
           rewrite -> four.
           exists (x * 16)%nat.
           omega.
-        + admit.                        (* padding in range *)
+        + apply pad_isbyteZ. eapply bytesBitsLists_isbyteZ. eassumption.
 
      * unfold sha_iv. reflexivity.
 Qed.

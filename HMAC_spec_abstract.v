@@ -10,9 +10,26 @@ Require Import Arith.
 Require Import HMAC_spec_list.
 Require Import HMAC_common_defs.
 
+Lemma VectorToList_cons A n: forall (a:A) l,
+      Vector.to_list (Vector.cons A a n l) =
+      cons a (Vector.to_list l).
+Proof. intros. reflexivity. Qed. 
+
+Lemma VectorToList_length {A}: forall n (v: Vector.t A n), length (Vector.to_list v) = n.
+Proof.
+  apply Vector.t_rec. reflexivity.
+  intros. rewrite VectorToList_cons. simpl. rewrite H. trivial.
+Qed.
+
+Lemma VectorToList_combine A n: forall (a:A) b v1 v2,
+     combine (Vector.to_list (Vector.cons A a n v1))
+             (Vector.to_list (Vector.cons A b n v2))
+   = (a,b) :: combine (Vector.to_list v1) (Vector.to_list v2).
+Proof. intros. simpl. f_equal. Qed.
+   
 Module HMAC_Abstract.
 
-Definition Blist := list bool.
+(*Definition Blist := list bool. already in HMAC_common_defs*)
 
 Fixpoint splitVector (A : Set) (n m : nat) :
   Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
@@ -135,19 +152,7 @@ functions: h, splitAndPad, fpad
 -----
 
 This should be informally equal to HMAC_Abstract, though I don't think there is a formal way to do and check module equivalence in Coq. *)
-SearchAbout Vector.t. 
 
-Lemma VectorToList_cons A n: forall (a:A) l,
-      Vector.to_list (Vector.cons A a n l) =
-      cons a (Vector.to_list l).
-Proof. intros. reflexivity. Qed. 
-
-Lemma VectorToList_combine A n: forall (a:A) b v1 v2,
-     combine (Vector.to_list (Vector.cons A a n v1))
-             (Vector.to_list (Vector.cons A b n v2))
-   = (a,b) :: combine (Vector.to_list v1) (Vector.to_list v2).
-Proof. intros. simpl. f_equal. Qed.
-   
 
 Theorem xor_eq' : forall (n : nat) (v1 v2 : Bvector n),
                    BLxor (Vector.to_list v1) (Vector.to_list v2) = 
@@ -268,7 +273,7 @@ Proof.
     unfold HMAC_Abstract.splitVector.
     simpl.
 
-Admitted.*)
+Admitted.
 Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)) (l : Blist),
                      l = Vector.to_list v ->
                      fst (splitList n l) =
@@ -285,6 +290,7 @@ Proof.
     simpl.
 
 Admitted.
+*)
 
 (* TODO: will prove that the list equivalents have this type *)
 Parameter h_v : Bvector c -> Bvector b -> Bvector c.
@@ -333,14 +339,16 @@ Check HMAC_Abstract.h_star.
 (* also h_star *)
 Lemma hash_words_eq : forall (v : list (Bvector b)) (l : list Blist),
                         (* TODO: figure out how to state equivalence between v and l *)
-                      (* l = Vector.to_list v -> *)
+                      (*l = Vector.to_list v -> *)
                       HMAC_List.hash_words sha_h sha_iv l =
                       Vector.to_list (HMAC_Abstract.hash_words p h_v iv_v v).
 Proof.
+  (*apply (Vector.t_rec bool).*)
   intros v l. (* inputs_eq.*)
   unfold HMAC_List.hash_words. unfold HMAC_Abstract.hash_words.
   unfold HMAC_List.h_star. unfold HMAC_Abstract.h_star.
   generalize dependent v.
+(*  eapply (Vector.t_rec bool).*)
   induction l as [ | bl bls].
   *
     admit.
@@ -360,6 +368,15 @@ Proof.
       admit.
 Qed.   
 
+Lemma SPLIT: forall m (v2 : Bvector m) n (v1 : Bvector n),
+      HMAC_Abstract.splitVector n m (Vector.append v1 v2)  = (v1, v2).
+Proof.
+  intros m v2.
+  eapply Vector.t_rec.
+  reflexivity.
+  intros. simpl. rewrite H. trivial.
+Qed.
+
 (* TODO: opad and ipad should be in HMAC_common_parameters (factor out of all spec) *)
 Theorem HMAC_eq : forall (kv : Bvector b) (kl m op ip : Blist),
                     kl = Vector.to_list kv ->
@@ -372,19 +389,9 @@ Proof.
   unfold HMAC_List.HMAC. unfold HMAC_Abstract.HMAC.
   unfold HMAC_List.HMAC_2K. unfold HMAC_Abstract.HMAC_2K.
   unfold HMAC_List.GHMAC_2K. unfold HMAC_Abstract.GHMAC_2K.
-  rewrite -> split_append_id.
-  Check split_append_id.
-  assert (forall (n : nat) (v1 v2 : Bvector n),
-            HMAC_Abstract.splitVector n n (Vector.append v1 v2) = (v1, v2))
-         as v_split_append_id.
-    admit.                      (* TODO *)
-  rewrite -> v_split_append_id.
-
+  subst.
+  rewrite SPLIT.
   apply hash_words_eq.
-  
-  * admit. (*goal: length (BLxor kl op) = HMAC_List.b c p)*) (* xor preserves lengths -- ok *)
-  * admit. (*goal: length (BLxor kl ip) = HMAC_List.b c p) *)
-
 Qed.  
 
 
