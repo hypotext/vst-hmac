@@ -72,10 +72,21 @@ Require Import SHA256.
 Function toBlocks (l : Blist) {measure length l} : list Blist :=
   match l with
     | nil => nil
+    | _ :: _ => if leb (length l) 511 then [firstn 512 l] 
+                else firstn 512 l :: toBlocks (skipn 512 l)
+  end.
+Proof.
+  intros. subst. remember (b :: l0) as l. clear Heql.
+  apply leb_complete_conv in teq0.
+  rewrite skipn_length; omega.
+Qed.
+(*Function toBlocks (l : Blist) {measure length l} : list Blist :=
+  match l with
+    | nil => nil
     | _ :: _ => firstn 512 l :: toBlocks (skipn 512 l)
   end.
 Proof.
-  intros.
+  intros. subst. SearchAbout skipn length.
   assert (skip : length (skipn 512 (b :: l0)) <= length l0).
   
   unfold skipn.
@@ -90,7 +101,7 @@ Proof.
   
   
 Admitted.
-
+*)
 Definition sha_splitandpad_blocks (msg : Blist) : list Blist :=
   toBlocks (sha_splitandpad_inc msg).
 
@@ -98,6 +109,30 @@ Definition sha_splitandpad_inc' (msg : Blist) : Blist :=
   concat (sha_splitandpad_blocks msg).
 
 (* TODO can use either toBlocks or toBlocks' *)
+Lemma concat_toBlocks_id : forall (l : Blist),
+                             InBlocks 512 l ->
+                             concat (toBlocks l) = l.
+Proof.
+  intros l len.
+  unfold concat.
+  induction len.
+
+  * rewrite -> toBlocks_equation. reflexivity.
+  *
+    rewrite -> toBlocks_equation.
+    destruct full. 
+      assert (@length bool nil = length (front ++ back)). rewrite <- H0; reflexivity. 
+      rewrite app_length, H in H1. remember (length back). clear - H1. rewrite plus_comm in H1. simpl in H1. omega.
+    rewrite H0, app_length, H, leb_correct_conv. 2: omega.
+    rewrite -> firstn_exact; trivial.
+    rewrite -> skipn_exact; trivial.
+    (*rewrite -> length_not_emp.*)
+    simpl.
+    rewrite -> IHlen.
+    unfold id.
+    reflexivity.
+Qed.
+(*
 Lemma concat_toBlocks_id : forall (l : Blist),
                              InBlocks 512 l ->
                              concat (toBlocks l) = l.
@@ -121,6 +156,7 @@ Proof.
   - apply H.
   - apply H.
 Qed.
+*)
 
 (* since sha_splitandpad_inc is used instead of the modified version in the Concat-Pad proof *)
 (* TODO: go through and verify that all the proofs chain *)
@@ -131,8 +167,7 @@ Proof.
   unfold sha_splitandpad_inc'. unfold sha_splitandpad_blocks.
   symmetry.
   apply concat_toBlocks_id.
-  *
-    (* InBlocks 512 (sha_splitandpad_inc msg) *)
+  * (* InBlocks 512 (sha_splitandpad_inc msg) *)
     admit.
 
 Qed.  
@@ -201,6 +236,17 @@ Lemma fpad_list_concat_eq :
   HMAC_List.app_fpad = HMAC_Concat.app_fpad.
 Proof. reflexivity. Qed.
 
+Lemma mult_triv x : forall y, y=2%nat -> x * y = x*2.
+Proof. intros. subst. omega. Qed.
+
+Lemma fold_left_iv_length: forall k (HK: forall iv x, length iv = k -> length (sha_h iv x) = k) l iv x , 
+  length iv = k ->
+  length (fold_left sha_h l (sha_h iv x)) = k.
+Proof. intros k HK l.
+  induction l. simpl. apply HK. 
+  simpl. intros.  rewrite IHl. trivial. apply HK. trivial.
+Qed. 
+
 Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
                              (* assumption on length m? TODO *)
                              length k = b ->
@@ -239,6 +285,16 @@ Proof.
   * unfold HMAC_Concat.app_fpad.
     unfold fpad.
     admit.
+    (*Lennart: here is an attempt to push this proof a bit further.
+      constructor. 2: constructor. rewrite app_length, bytesToBits_len.
+        unfold fpad_inner. repeat rewrite app_length. 
+        rewrite Coqlib.length_list_repeat, pure_lemmas.length_intlist_to_Zlist.
+        rewrite (mult_triv 4). 2: reflexivity.
+        rewrite bitsToBytes_len; simpl.
+       But here we get a contradiction - clearly the two remaining subgoals
+        can't both be true. Once we have the right value (and maybe specialze b to 512??),
+        I'd like to prove the second goal sth like this:
+       Focus 2.  apply fold_left_iv_length.*)
   * apply BLxor_length. apply k_len. apply ip_len.
   * 
   (*  Forall (fun x : list bool => length x = 512%nat)
