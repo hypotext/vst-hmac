@@ -127,7 +127,7 @@ Proof.
       (length (list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0%Z) + 9))%nat) by omega.
   rewrite -> H. clear H.
 
-  SearchAbout generate_and_pad.
+(*  SearchAbout generate_and_pad.*)
   rewrite -> Zlength_correct.
   rewrite -> length_list_repeat.
 
@@ -141,10 +141,10 @@ Proof.
   intros. omega.
 
   rewrite -> move.
-  SearchAbout (_ + (_ mod _)).
+(*  SearchAbout (_ + (_ mod _)).*)
   rewrite -> Zplus_mod_idemp_r.
 
-  SearchAbout (_ + (Z.of_nat _)).
+(*  SearchAbout (_ + (Z.of_nat _)).*)
   assert (Z_9 : 9 = Z.of_nat (9%nat)). reflexivity.
   rewrite -> Z_9.
 
@@ -169,28 +169,18 @@ Lemma pad_len_64 : forall (msg : list Z), exists (n : Z),
 Proof.
   intros msg.
   pose proof pad_len_64_mod msg as pad_len_mod.
-
-  SearchAbout (_ mod _).
-  rewrite -> Zmod_divides in *.
+  rewrite -> Zmod_divides in *. 2: omega.
 
   destruct pad_len_mod.
   exists x.
   split.
   apply H.
-
-  *
-    admit.
-  (* TODO x >= 0 -- true? necessary? 
-     a >= 0 -> b > 0 -> a mod b = 0 -> exists c, a = b * c, c >= 0
-     by contradiction: already know exists c, a = b * c (c of any sign)
-     if c were negative, then exactly one of a or b would have to be negative
- *)
-  * omega.
+  specialize (Zlength_nonneg (pad msg)); intros. omega.
 Qed.
 
 Lemma pad_len_64_nat : forall (msg : list Z), exists (n : nat),
                            (length (pad msg))%nat = (64 * n)%nat.
-Proof.
+Proof. 
   intros msg.
   pose proof pad_len_64 msg as pad_len_64.
 
@@ -207,7 +197,7 @@ Proof.
   rewrite -> Nat2Z.id in app_each.
 
   rewrite -> app_each.
-  SearchAbout (Z.to_nat (_ * _)).
+(*  SearchAbout (Z.to_nat (_ * _)).*)
   rewrite -> Z2Nat.inj_mul.
   assert (n_64 : Z.to_nat 64 = 64%nat). reflexivity.
 
@@ -248,6 +238,7 @@ Proof.
   exists (16 * x - 2)%nat.
   omega.
 Qed.
+
 
 Lemma total_pad_len_Zlist' : forall (msg : list Z), 
      length
@@ -402,7 +393,7 @@ Proof.
   
   SearchAbout ( _ <> _).
   
-Admitted.
+Admitted. (*Lennart: I think this lemma is neither used anywhere, nor true, so it can probably be deleted*)
 
 (* TODO prove equivalent to above *)
 Theorem contrapositive_gap : forall (m1 m2 : list Z),
@@ -414,5 +405,5 @@ Proof.
   unfold generate_and_pad in *.
   
   
-Admitted.
+Admitted. (*Lennart: I think this lemma is neither used anywhere, nor true, so it can probably be deleted*)
 

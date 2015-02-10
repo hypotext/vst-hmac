@@ -63,6 +63,16 @@ Definition HMAC IP OP txt password: list Z :=
   let key := map Byte.repr (mkKey password) in
   OUTER OP key (INNER IP key txt).
 
+Definition APPLY a txt :=  HF.Hash (a ++ txt).
+Definition HMAC' IP OP txt password: list Z := 
+  let key := map Byte.repr (mkKey password) in
+  APPLY (mkArgZ key OP) (APPLY (mkArgZ key IP) txt).
+
+Goal forall IP OP txt password,
+  HMAC' IP OP txt password = HMAC IP OP txt password.
+reflexivity.
+Qed.
+
 End HMAC_FUN.
 
 Require Import SHA256.
@@ -80,6 +90,8 @@ Definition Ipad := Byte.repr 54. (*0x36*)
 Definition Opad := Byte.repr 92. (*0x5c*)
 
 Definition HMAC256 := HMAC_SHA256.HMAC Ipad Opad.
+Goal HMAC256 = fun a b => a.
+unfold HMAC256. unfold HMAC_SHA256.HMAC.
 
 Definition HMACString (txt passwd:string): list Z :=
   HMAC256 (str_to_Z txt) (str_to_Z passwd).
