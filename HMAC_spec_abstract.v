@@ -10,6 +10,9 @@ Require Import Arith.
 Require Import HMAC_spec_list.
 Require Import HMAC_common_defs.
 
+Definition Vector_0_is_nil (T : Type) (v : Vector.t T 0) : v = Vector.nil T := 
+  match v with Vector.nil => eq_refl end.
+
 Lemma VectorToList_cons A n: forall (a:A) l,
       Vector.to_list (Vector.cons A a n l) =
       cons a (Vector.to_list l).
