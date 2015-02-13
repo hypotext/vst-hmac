@@ -404,6 +404,27 @@ Proof. intros k HK l.
   simpl. intros.  rewrite IHl. trivial. apply HK. trivial.
 Qed. 
 
+(*NEW2*) Lemma sha_iv_length: length sha_iv = 256%nat.
+Proof. reflexivity. Qed.
+
+(*NEW2*) Lemma hash_blocks_bits_len: forall r l, length r = 256%nat -> 
+      InBlocks 512 l ->
+      length (hash_blocks_bits sha_h r l) = 256%nat.
+Proof. intros r l.
+  apply hash_blocks_bits_ind.
+  intros. trivial.
+  simpl; intros. destruct _x. contradiction. subst msg; clear y.
+  inv H1.
+  apply H; clear H. unfold sha_h, intsToBits. rewrite bytesToBits_len, length_intlist_to_Zlist.
+  rewrite length_hash_block. omega.
+  unfold bitsToInts. erewrite length_Zlist_to_intlist. reflexivity.
+    rewrite bitsToBytes_len_gen with (n:=32%nat). reflexivity. apply H0.
+  unfold bitsToInts. erewrite length_Zlist_to_intlist. reflexivity.
+    erewrite bitsToBytes_len_gen with (n:=64%nat). reflexivity.
+    rewrite H3, firstn_exact. apply H2. apply H2.
+    rewrite H3, skipn_exact. assumption. apply H2. 
+Qed.
+
 Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
                              (* assumption on length m? TODO *)
                              length k = b ->
@@ -441,17 +462,28 @@ Proof.
   * apply BLxor_length. apply k_len. apply op_len.
   * unfold HMAC_Concat.app_fpad.
     unfold fpad.
-    admit.
-    (*Lennart: here is an attempt to push this proof a bit further.
-      constructor. 2: constructor. rewrite app_length, bytesToBits_len.
+
+    (*NEW2*)
+    constructor. 2: constructor.
+    rewrite app_length, fold_hash_blocks_eq.
+      2: apply BLxor_length; trivial. 
+      2: apply sha_splitandpad_blocks_512.
+    assert (IB: InBlocks 512 (BLxor k ip ++ concat (sha_splitandpad_blocks m))).
+      unfold sha_splitandpad_blocks. 
+      rewrite concat_toBlocks_id. 2: apply sha_splitandpad_inc_InBlocks.
+      econstructor.
+        2: reflexivity.
+        2: apply sha_splitandpad_inc_InBlocks.
+        apply BLxor_length; trivial.
+    rewrite bytesToBits_len.
         unfold fpad_inner. repeat rewrite app_length. 
         rewrite Coqlib.length_list_repeat, pure_lemmas.length_intlist_to_Zlist.
         rewrite (mult_triv 4). 2: reflexivity.
-        rewrite bitsToBytes_len; simpl.
-       But here we get a contradiction - clearly the two remaining subgoals
-        can't both be true. Once we have the right value (and maybe specialze b to 512??),
-        I'd like to prove the second goal sth like this:
-       Focus 2.  apply fold_left_iv_length.*)
+    rewrite (hash_blocks_bits_len sha_iv sha_iv_length IB). 
+    rewrite Zlength_correct. 
+    erewrite bitsToBytes_len_gen with (n:=32%nat).
+    reflexivity.
+    apply (hash_blocks_bits_len sha_iv sha_iv_length IB).
   * apply BLxor_length. apply k_len. apply ip_len.
   * 
   (*  Forall (fun x : list bool => length x = 512%nat)
