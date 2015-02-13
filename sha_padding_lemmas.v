@@ -239,8 +239,8 @@ Proof.
   omega.
 Qed.
 
-
-Lemma total_pad_len_Zlist' : forall (msg : list Z), 
+(*Lennart: This Lemma does not appear to be used at present
+  Lemma total_pad_len_Zlist' : forall (msg : list Z), 
      length
        (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
      = (
@@ -255,8 +255,7 @@ Proof.
   
   (* simpl. *)
   (* TODO *)
-
-Admitted.
+*)
 
 Lemma pad_inwords :
   forall (msg : list Z),

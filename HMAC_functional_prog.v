@@ -90,8 +90,6 @@ Definition Ipad := Byte.repr 54. (*0x36*)
 Definition Opad := Byte.repr 92. (*0x5c*)
 
 Definition HMAC256 := HMAC_SHA256.HMAC Ipad Opad.
-Goal HMAC256 = fun a b => a.
-unfold HMAC256. unfold HMAC_SHA256.HMAC.
 
 Definition HMACString (txt passwd:string): list Z :=
   HMAC256 (str_to_Z txt) (str_to_Z passwd).
