@@ -133,64 +133,7 @@ Lemma NPeano_divide_trans a b c: NPeano.divide a b ->
 Proof. intros. destruct H; destruct H0. subst.
   exists (x0 * x)%nat. apply mult_assoc.
 Qed. 
-(*
-Lemma R_hash_blocks_bits_length: forall f r msg
-      (HR: forall (z:Blist), z<> nil -> NPeano.divide (length r) (length (f r (firstn 512 z))))
-      h (Hh: R_hash_blocks_bits f r msg h) ,
-      NPeano.divide (length r) (length h).
-Proof. intros.
-SearchAbout R_hash_blocks_bits.
-  eapply (R_hash_blocks_bits_rec). Focus 3. eassumption.
-  intros. exists 1%nat. omega.
-  intros. subst. eapply NPeano_divide_trans. 2: eassumption. clear H.
- destruct _x. contradiction. clear y.
-  SearchAbout NPeano.divide. simpl in *.  intros y.
-  induction y.
-  intros. unfold hash_blocks_bits. simpl. exists 1%nat. omega.
-  intros. unfold hash_blocks_bits. 
-    remember (hash_blocks_bits_terminate f x (a :: y)%list).
-    destruct s as [v [p Hvp]]. clear Heqs.
-    unfold hash_blocks_bits_F in Hvp. simpl in Hvp. fold hash_blocks_bits_F in Hvp.  unfold NPeano.divide. SearchAbout NPeano.divide. simpl. Z.divide.
-Admitted.
-Lemma hash_blocks_bits_length: forall f r msg
-      (HR: forall (z:Blist), z<> nil -> NPeano.divide (length r) (length (f r (firstn 512 z)))),
-      NPeano.divide (length r) (length (hash_blocks_bits f r msg)).
-Proof.
-Print R_hash_blocks_bits.
-  Check (hash_blocks_bits_rect f).
-  intros. exists 1%nat. omega.
-  intros. subst. eapply NPeano_divide_trans. 2: eassumption. clear H.
- destruct _x. contradiction. clear y.
-  SearchAbout NPeano.divide. simpl in *.  intros y.
-  induction y.
-  intros. unfold hash_blocks_bits. simpl. exists 1%nat. omega.
-  intros. unfold hash_blocks_bits. 
-    remember (hash_blocks_bits_terminate f x (a :: y)%list).
-    destruct s as [v [p Hvp]]. clear Heqs.
-    unfold hash_blocks_bits_F in Hvp. simpl in Hvp. fold hash_blocks_bits_F in Hvp.  unfold NPeano.divide. SearchAbout NPeano.divide. simpl. Z.divide.
-Admitted.
-(*
-Lemma hash_blocks_bits_terminate_length: forall f x y,
-      NPeano.divide (length x) (fst (hash_blocks_bits_terminate f x y)).
-       (a,_) => NPeano.divide (length x) (length a)
-      end.*)
-SearchAbout hash_blocks_bits.
-Lemma HBBF_length hash_block_bit: forall msg r,
-      NPeano.divide (length r) (length (hash_blocks_bits_F r msg)). (*
-Lemma hash_blocks_bits_terminate_length f x y: 
-      match hash_blocks_bits_terminate f x y with
-       (a,b) => length a = 8%nat
-      end.*)
-Lemma hash_blocks_bits_length f: forall y x, NPeano.divide (length x) (length (hash_blocks_bits f x y)).
-Proof. hash_blocks_bits_rect intros y.
-  induction y.
-  intros. unfold hash_blocks_bits. simpl. exists 1%nat. omega.
-  intros. unfold hash_blocks_bits. 
-    remember (hash_blocks_bits_terminate f x (a :: y)%list).
-    destruct s as [v [p Hvp]]. clear Heqs.
-    unfold hash_blocks_bits_F in Hvp. simpl in Hvp. fold hash_blocks_bits_F in Hvp.  unfold NPeano.divide. SearchAbout NPeano.divide. simpl. Z.divide.
-Admitted.
-*)
+
 Theorem HMAC_concat_pad : forall (k m : Blist) (op ip : Blist),
                             length k = b ->
                             length ip = b ->

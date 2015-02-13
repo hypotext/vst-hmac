@@ -157,8 +157,6 @@ Theorem combine_map : forall {A B : Type} (f : A -> B) (l1 : list A) (l2 : list 
                         map (fun p => (f (fst p), f (snd p))) (combine l1 l2).
 Proof.
   intros.
-  SearchAbout combine.
-  Print combine.
   revert f l2.
   induction l1 as [ | x1 xs1].
   *
@@ -175,6 +173,32 @@ Proof.
       apply IHxs1.
 Qed.
 
+Require Import pure_lemmas.
+
+Theorem xor_inrange : forall (x y : Z),
+                        x = x mod Byte.modulus
+                        -> y = y mod Byte.modulus
+                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
+Proof.
+  intros. symmetry. apply Byte.equal_same_bits. intros.
+  assert (ZZ: Z.lxor x y mod Byte.modulus =
+        Z.lxor x y mod two_p (Z.of_nat Byte.wordsize)).
+        rewrite Byte.modulus_power. reflexivity.
+  rewrite ZZ; clear ZZ.     
+  rewrite Byte.Ztestbit_mod_two_p; trivial.
+  destruct (zlt i (Z.of_nat Byte.wordsize)). trivial. 
+  symmetry. rewrite Z.lxor_spec.
+  assert (BB: Byte.modulus = two_p (Z.of_nat Byte.wordsize)).
+    apply Byte.modulus_power. 
+  rewrite BB in H, H0.
+
+  rewrite H; clear H; rewrite H0; clear H0 BB.
+   rewrite Byte.Ztestbit_mod_two_p; try omega.
+   rewrite Byte.Ztestbit_mod_two_p; try omega.
+   destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. omega.
+Qed.
+
+(*Old proof attempt:
 Theorem xor_inrange : forall (x y : Z),
                         x = x mod Byte.modulus
                         -> y = y mod Byte.modulus
@@ -182,15 +206,16 @@ Theorem xor_inrange : forall (x y : Z),
 Proof.
   intros.
   (* x = x mod Byte.modulus implies x in range *)
-  assert (x_inrange : 0 <= x < 10). admit.
-  assert (y_inrange : 0 <= y < 10). admit.
+  assert (x_inrange : 0 <= x < 10). admit. -- ok, in comment
+  assert (y_inrange : 0 <= y < 10). admit. -- ok, in comment
   (* prove by brute force over x and y being in range *)
   (* TODO: runs out of memory when upper bound is 256; takes a long time even at 40 *)
   Opaque Z.lxor.
   
   (* doesn't work w/ omega as tactic; simpl is necessary? *)
   do_range x_inrange simpl; do_range y_inrange reflexivity.
-Admitted.
+Admitted. -- ok, in comment
+*)
 
 Lemma mkArgZ_mkArg_eq : forall (pad : Z) (k : list Z),
    HP.HMAC_SHA256.mkArgZ (map Byte.repr (HP.HMAC_SHA256.mkKey k))
