@@ -220,19 +220,16 @@ Proof.
   * apply BLxor_length. apply len_k. apply len_op.
   *
     unfold HMAC_Concat.h_star.
-    Print intsToBits. SearchAbout InBlocks.
-(* Lennart: here's a minor attemp to psuh this further:
-     rewrite -> hash_blocks_bits_equation.
-    unfold sha_h.
-    apply InBlocks_len. This goal here triggered the attempt to prove the divide-slemmas above*)
-    rewrite -> hash_blocks_bits_equation.
-    unfold sha_h.
-    Check common_lemmas.length_hash_block.
-    Check hash_blocks_bits_equation.
-    Print sha_h.
-    SearchAbout hash_blocks.
-    Check pure_lemmas.length_hash_blocks.
-    admit.
+    apply InBlocks_len.
+    rewrite hash_blocks_bits_len.
+      exists (32%nat).  simpl. omega.
+      apply sha_iv_length.
+      rewrite splitandpad_eq.
+               econstructor.
+                 2: reflexivity.
+                 apply BLxor_length. apply len_k. apply len_ip.
+                 apply sha_splitandpad_inc_InBlocks.
+                 apply BLxor_length. apply len_k. apply len_ip.
   * apply BLxor_length. apply len_k. apply len_ip.
   * apply BLxor_length. apply len_k. apply len_op.
   * apply BLxor_length. apply len_k. apply len_ip.

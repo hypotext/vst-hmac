@@ -7,6 +7,7 @@ Require Import Recdef.
 Require Import List.
 Require Import Arith.
 Require Import Coqlib.
+Require Import pure_lemmas.
 
 Definition Blist := list bool.
 
@@ -57,16 +58,6 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
 
 Definition sha_splitandpad (msg : Blist) : Blist :=
   bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
-
-(* modified version of sha_padding_lemmas.pad *)
-Definition pad_inc (msg : list Z) : list Z := 
-  let n := BlockSize + Zlength msg in
-  msg ++ [128%Z] 
-      ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
-      ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
-
-Definition sha_splitandpad_inc (msg : Blist) : Blist :=
-  bytesToBits (pad_inc (bitsToBytes msg)).
 
 (* artifact of app_fpad definition *)
 Definition fpad_inner (msg : list Z) : list Z :=
@@ -150,3 +141,123 @@ Proof.
     rewrite -> firstn_exact. rewrite -> skipn_exact.
     * reflexivity. * assumption. * assumption.
 Qed.
+
+
+Lemma fold_left_iv_length: forall k (HK: forall iv x, length iv = k -> length (sha_h iv x) = k) l iv x , 
+  length iv = k ->
+  length (fold_left sha_h l (sha_h iv x)) = k.
+Proof. intros k HK l.
+  induction l. simpl. apply HK. 
+  simpl. intros.  rewrite IHl. trivial. apply HK. trivial.
+Qed. 
+
+
+(* modified version of sha_padding_lemmas.pad *)
+Definition pad_inc (msg : list Z) : list Z := 
+  let n := BlockSize + Zlength msg in
+  msg ++ [128%Z] 
+      ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
+      ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
+
+Definition sha_splitandpad_inc (msg : Blist) : Blist :=
+  bytesToBits (pad_inc (bitsToBytes msg)).
+
+(*NEW*) Require Import pure_lemmas.
+(*NEW*) Require Import Coqlib.
+(*NEW*) Require Import Integers.
+
+(*NEW*) Lemma sha_splitandpad_inc_nil: length (sha_splitandpad_inc nil) = 512%nat.
+Proof. reflexivity. Qed.
+
+(*NEW*) Lemma add_blocksize_length l n: 0<=n ->
+      BinInt.Z.add n (Zcomplements.Zlength l) = Zcomplements.Zlength ((Coqlib.list_repeat (Z.to_nat n) true) ++ l).
+Proof. intros. do 2 rewrite Zlength_correct.
+  rewrite app_length, length_list_repeat, Nat2Z.inj_add, Z2Nat.id; trivial.
+Qed. 
+
+(*NEW*) Lemma pad_inc_length: forall l, exists k, (0 < k /\ length (pad_inc l) = k*64)%nat.
+Proof. unfold pad_inc.
+  induction l. 
+  simpl. exists (1%nat). omega.
+  destruct IHl as [k [K HK]]. repeat rewrite app_length in *. rewrite length_list_repeat in *.
+  rewrite pure_lemmas.length_intlist_to_Zlist in *.
+  remember (BinInt.Z.to_nat
+        (BinInt.Z.modulo
+           (BinInt.Z.opp
+              (BinInt.Z.add (BinInt.Z.add BlockSize (Zcomplements.Zlength l))
+                 9)) 64)).
+  remember (BinInt.Z.to_nat
+      (BinInt.Z.modulo
+         (BinInt.Z.opp
+            (BinInt.Z.add
+               (BinInt.Z.add BlockSize (Zcomplements.Zlength (a :: l))) 9))
+         64)).
+  simpl. simpl in HK.
+  assert ((BinInt.Z.add
+                   (BinInt.Z.add BlockSize (Zcomplements.Zlength (a :: l))) 9) =
+          BinInt.Z.add 1 (BinInt.Z.add
+                   (BinInt.Z.add BlockSize (Zcomplements.Zlength l)) 9)).
+        rewrite BinInt.Z.add_assoc. f_equal.
+          rewrite BinInt.Z.add_assoc. rewrite (BinInt.Z.add_comm 1). rewrite <- (BinInt.Z.add_assoc _ 1).
+          f_equal. 
+          repeat rewrite Zcomplements.Zlength_correct. SearchAbout BinInt.Z.add BinInt.Z.of_nat.
+          apply (Znat.Nat2Z.inj_add 1 (length l)).
+   rewrite H in Heqn0; clear H. 
+   remember (BinInt.Z.add (BinInt.Z.add BlockSize (Zcomplements.Zlength l)) 9). clear Heqz.
+   subst n n0. rewrite Z.opp_add_distr. rewrite <- (Z.add_comm (-z)). remember (-z) as zz. clear Heqzz.
+   simpl.
+   destruct (zeq (zz mod 64) 0).
+     rewrite e in HK.
+     assert ((zz+-1) mod 64 = 63). clear - e.  apply Zmod_divides in e. 2:omega. 
+        destruct e. subst. rewrite Zplus_mod. rewrite Z.mul_comm. rewrite Z_mod_mult. simpl.
+        rewrite Zmod_mod. apply Zmod_unique with (a:=(-1)). omega. omega.
+     rewrite H. clear H e. simpl in *. exists (S k). omega.
+   assert ((zz + -1) mod 64 = (zz mod 64) - 1 /\ 0 <= (zz mod 64) - 1). 
+     clear -n. rewrite Zplus_mod. assert (0 <= zz mod 64 < 64). apply Z.mod_pos_bound. omega.
+     split. 2: omega.
+     symmetry. eapply Z.mod_unique. left. omega.
+     assert (63 = -1 mod 64). eapply Z.mod_unique. left; omega. instantiate (1:=-1). omega.
+     rewrite <- H0. instantiate (1:=1). omega.
+   destruct H. rewrite H. clear H.   
+   assert (Z.to_nat (zz mod 64 - 1) = minus (Z.to_nat (zz mod 64)) 1).
+     clear - n H0. remember (zz mod 64).  clear Heqz. rewrite Z2Nat.inj_sub. reflexivity. omega. 
+   rewrite H; clear H. rewrite <- NPeano.Nat.add_sub_swap. rewrite minus_Sn_m. simpl. exists k. omega.
+   omega. apply (Z2Nat.inj_le 1). omega. omega. omega.
+Qed. 
+
+(*NEW*) Lemma sha_splitandpad_inc_length: forall m, exists k, 
+      (0<k /\ length (sha_splitandpad_inc m) = k * 512)%nat.
+Proof. intros. unfold sha_splitandpad_inc.
+  destruct (pad_inc_length (bitsToBytes m)) as [k [K HK]].
+  rewrite bytesToBits_len, HK. exists k. split. trivial. omega.
+Qed.
+
+
+(*NEW*) Lemma sha_splitandpad_inc_InBlocks m : InBlocks 512 (sha_splitandpad_inc m).
+Proof. intros. apply InBlocks_len.
+  destruct (sha_splitandpad_inc_length m) as [k [K HK]].
+  rewrite HK. exists k. trivial.
+Qed.
+
+(*NEW2*) Lemma sha_iv_length: length sha_iv = 256%nat.
+Proof. reflexivity. Qed.
+
+(*NEW2*) Lemma hash_blocks_bits_len: forall r l, length r = 256%nat -> 
+      InBlocks 512 l ->
+      length (hash_blocks_bits sha_h r l) = 256%nat.
+Proof. intros r l.
+  apply hash_blocks_bits_ind.
+  intros. trivial.
+  intros. destruct _x. contradiction. subst msg; clear y.
+  inv H1.
+  apply H; clear H. unfold sha_h, intsToBits.
+ rewrite bytesToBits_len, length_intlist_to_Zlist.
+  rewrite length_hash_block. omega.
+  unfold bitsToInts. erewrite length_Zlist_to_intlist. reflexivity.
+    rewrite bitsToBytes_len_gen with (n:=32%nat). reflexivity. apply H0.
+  unfold bitsToInts. erewrite length_Zlist_to_intlist. reflexivity.
+    erewrite bitsToBytes_len_gen with (n:=64%nat). reflexivity.
+    rewrite H3, firstn_exact. apply H2. apply H2.
+    rewrite H3, skipn_exact. assumption. apply H2. 
+Qed.
+
