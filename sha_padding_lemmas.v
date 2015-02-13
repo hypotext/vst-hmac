@@ -239,24 +239,6 @@ Proof.
   omega.
 Qed.
 
-(*Lennart: This Lemma does not appear to be used at present
-  Lemma total_pad_len_Zlist' : forall (msg : list Z), 
-     length
-       (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
-     = (
-         (NPeano.div (Z.to_nat (Zlength msg) + 8) 4%nat + 14%nat)
-          * Z.to_nat WORD
-     )%nat.
-Proof.
-  intros msg.
-  repeat rewrite -> fstpad_len.
-  replace (S (Z.to_nat (- (Zlength msg + 9) mod 64)))
-    with (1 + (Z.to_nat (- (Zlength msg + 9) mod 64)))%nat by omega.
-  
-  (* simpl. *)
-  (* TODO *)
-*)
-
 Lemma pad_inwords :
   forall (msg : list Z),
     InWords (msg ++ [128]
@@ -373,36 +355,4 @@ or, if one-to-one property is desired (for HMAC), only need to prove that
 the padded messages differ
 *)
 
-Definition generate_and_pad_copy msg := 
-  let n := Zlength msg in
-   Zlist_to_intlist (msg ++ [128%Z] 
-                ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0)
-           ++ [Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)].
-
-(* Probably easier to use the rewritten version; already "proved"
- that that's in blocks of 4 *)
-
-Theorem length_differ_pad_differ : forall (m1 m2 : list Z),
-                                     Zlength m1 <> Zlength m2 ->
-                                     generate_and_pad m1 <> generate_and_pad m2.
-Proof.
-  intros m1 m2 len_diff.
-  unfold generate_and_pad.
-  
-  
-  SearchAbout ( _ <> _).
-  
-Admitted. (*Lennart: I think this lemma is neither used anywhere, nor true, so it can probably be deleted*)
-
-(* TODO prove equivalent to above *)
-Theorem contrapositive_gap : forall (m1 m2 : list Z),
-                                     generate_and_pad m1 = generate_and_pad m2 ->
-                                     Zlength m1 = Zlength m2.
-
-Proof.
-  intros m1 m2 gap_eq.
-  unfold generate_and_pad in *.
-  
-  
-Admitted. (*Lennart: I think this lemma is neither used anywhere, nor true, so it can probably be deleted*)
-
+(* Unproven *)

@@ -450,5 +450,29 @@ Proof.
     apply iv_eq.
 Qed.
 
+(* Framework for abstract:
+>>>>>>> ff9e185599ec321fe86911f8cf9d70a17e42c407
+
+v2l (V.append a b) = v2l a ++ v2l b
+keep composing these functions, and the v2ls should "pop out"
+
+Lifting a function on lists to a function on vectors? or the other way around?
+
+mkVector : forall (l : list A), length l = n -> Vector.t A n.
+
+Vector ?= {list, proof it's the right length}
+no, it's defined inductively 
+
+(creates a proof)
+v2l_length : forall A n (v : Vector.t A n),
+  length (v2l v) = n.
+
+Definition h_sha (iv : Bvector 256) (block: Bvector 512) : Bvector 256 :=
+   (mkVector (f_sha (v2l iv) (v2l block))
+   (f_sha_lemma (v2l iv) (v2l block)
+   (v2l_length 256 iv) (v2l_length 512 block)) <-- proofs
+
+^ may have misplaced parens. unclear on what f_sha and f_sha_lemma are
+ *)
 
 

@@ -80,33 +80,6 @@ Proof.
   apply leb_complete_conv in teq0.
   rewrite skipn_length; omega.
 Qed.
-(*Lemma toBlocks_consD h t: toBlocks (cons h t) = 
-      if leb (length (cons h t) ) 511 then [firstn 512 (cons h t) ] 
-      else firstn 512 (cons h t)  :: toBlocks (skipn 512 (cons h t) ).
-Proof. rewrite toBlocks_equation. reflexivity. Qed.*)
-
-(*Function toBlocks (l : Blist) {measure length l} : list Blist :=
-  match l with
-    | nil => nil
-    | _ :: _ => firstn 512 l :: toBlocks (skipn 512 l)
-  end.
-Proof.
-  intros. subst. SearchAbout skipn length.
-  assert (skip : length (skipn 512 (b :: l0)) <= length l0).
-  
-  unfold skipn.
-  SearchAbout skipn.
-    
-  (* rewrite -> skipn_length. *)
-  (* assert (Hlen : forall {A : Type} (l : list A), length l >= 0%nat). *)
-  (*     intros. destruct l0; simpl. omega. omega. *)
-  (* specialize (Hlen bool (b :: l0)). *)
-  (* destruct Hlen. *)
-  (* simpl. *)
-  
-  
-Admitted.
-*)
 
 Definition sha_splitandpad_blocks (msg : Blist) : list Blist :=
   toBlocks (sha_splitandpad_inc msg).
