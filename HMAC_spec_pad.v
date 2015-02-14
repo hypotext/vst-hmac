@@ -481,7 +481,36 @@ Qed.
 
 (* front/back equivalence theorems: stuck *)
 
-Lemma front_equiv :
+(*NEW proof*) Lemma front_equiv :
+  (* forall (front back : Blist) (FRONT BACK : list int), *)
+  forall (back : Blist) (BACK : list int) (front : Blist) (FRONT : list int),
+    (*not needed:Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->*)
+    (length front)%nat = 512%nat ->
+    (length FRONT)%nat = 16%nat ->
+    (*not needed InBlocks 512 front ->
+    InBlocks 16 FRONT ->
+    InBlocks 512 back ->
+    InBlocks 16 BACK ->*)         (* shouldn't need these two *)
+    front ++ back = convert (FRONT ++ BACK) ->
+    front = convert FRONT.
+Proof.
+  intros back BACK front FRONT (*range*) f_len F_len (*fblocks Fblocks bblocks Bblocks*) concat_eq.
+  unfold convert in *.
+  rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
+
+  rewrite -> bytesToBits_app in concat_eq.
+  assert (back = skipn 512 (front ++ back)).
+    rewrite skipn_exact; trivial.
+  assert (bytesToBits (intlist_to_Zlist BACK) = skipn 512 (front ++ back)).
+    rewrite concat_eq; clear concat_eq. 
+    rewrite skipn_exact; trivial.
+    rewrite bytesToBits_len, pure_lemmas.length_intlist_to_Zlist, F_len; omega.
+  rewrite H, H0 in concat_eq; clear H H0.
+  eapply app_inv_tail. eassumption.
+Qed. 
+
+(*OLD PROOF ATTEMPT:
+  Lemma front_equiv :
   (* forall (front back : Blist) (FRONT BACK : list int), *)
   forall (back : Blist) (BACK : list int) (front : Blist) (FRONT : list int),
     Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
@@ -550,6 +579,7 @@ and back = convert BACK
       (* frontFinal = front0 ++ back1; FRONTFINAL = front ++ back (confusing)  *)
 
 Admitted.
+*)
 (* don't induct on the back blocks -- induction case is unprovable 
    see history for deleted notes
 *)
@@ -649,11 +679,13 @@ Proof.
           (* TODO: prove the fronts are equivalent *)
           rewrite -> H0 in inputs_eq.
           rewrite -> H2 in inputs_eq.
+
+          (*NEW*) apply (front_equiv back0 back front0 front H1 H inputs_eq).
+
           (* pose proof blocks_equiv front0 back0 front back as blocks_equiv. *)
           (* destruct blocks_equiv. *)
           (* apply inputs_eq. *)
           (* apply H3. *)
-          admit.
         }
      +
        rewrite -> H0. rewrite -> app_length. rewrite -> H. omega.
