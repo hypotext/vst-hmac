@@ -1,21 +1,3 @@
-(* admits: 14 + 2
-
-- front ~ FRONT, back ~ BACK <-- have paper proof but am stuck
-   - make following code compile
-
-- SHA proofs related to generate_and_pad
-   - pushed 2 admits back to sha_padding_lemma (InBlocks corr + positive n)
-
-- range: bytes in range
-- pad + intlist_to_Zlist preserve in range, fix the Forall
-
-------
-
-- modules
-- linking proofs
-
-*)
-
 Set Implicit Arguments.
 
 Require Import List. Import ListNotations.
@@ -308,10 +290,9 @@ Definition wrap (F : B -> B) : A -> A :=
 Definition roundtrip : B -> B :=
   convert_AB ∘ convert_BA.
 
-(* Axiom *)
 Lemma roundtrip_id :
   forall (X : B), convert_AB (convert_BA X) = X.
-Proof. Admitted.
+Proof. Admitted. (* Axiom *)
 
 Lemma once_eq :
     forall (x : A) (X : B) (f : A -> A) (F : B -> B),
@@ -357,15 +338,6 @@ Qed.
 
 (* Definition of InBlocks in sha_padding_lemmas *)
 
-(* Lemma test : InBlocks 512 (list_repeat 512 true). *)
-(* Proof. *)
-(*   eapply list_block. *)
-(*   instantiate (1 := list_repeat 512 true). *)
-(*   - reflexivity. *)
-(*   - instantiate (1 := []). rewrite -> app_nil_r. reflexivity. *)
-(*   - apply list_nil. *)
-(* Qed. *)
-
 Lemma bitsToByte_cons: forall bits h t, (h::t) = bitsToBytes bits -> 
       exists b0, exists b1, exists b2, exists b3, 
       exists b4, exists b5, exists b6, exists b7, exists xs,
@@ -386,6 +358,8 @@ Proof. intros.
   split; reflexivity.
 Qed.
 
+(* Lemmas stating that various operations result in bytes in range *)
+
 Lemma bitsToByte_isbyteZ b0 b1 b2 b3 b4 b5 b6 b7:
       isbyteZ (bitsToByte [b0, b1, b2, b3, b4, b5, b6, b7]).
 Proof. simpl. unfold asZ, isbyteZ.
@@ -393,7 +367,8 @@ Proof. simpl. unfold asZ, isbyteZ.
   destruct b4; destruct b5; destruct b6; destruct b7; simpl; omega.
 Qed.
 
-Lemma bitsToBytes_isbyteZ: forall bytes bits, bytes = bitsToBytes bits -> Forall isbyteZ bytes.
+Lemma bitsToBytes_isbyteZ: forall bytes bits,
+                             bytes = bitsToBytes bits -> Forall isbyteZ bytes.
 Proof. intros bytes.
   induction bytes; simpl; intros.
      constructor.
@@ -432,6 +407,8 @@ Proof. intros. unfold pad.
   apply pure_lemmas.isbyte_intlist_to_Zlist.
 Qed.  
 
+(* --------------------------- end bytes/bits proofs *)
+
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
                             bytes_bits_lists bits bytes ->
                             bytes_bits_lists
@@ -449,10 +426,10 @@ Proof.
   rewrite <- inputs_eq. apply pad_isbyteZ. trivial.
 Qed.
 
-(*Lennart: I thionk we need another asummption here: Forall isbyteZ bytes*)
 Lemma hash_block_equiv :
   forall (bits : Blist) (bytes : list Z)
          (regs : Blist) (REGS : SHA256.registers),
+    Forall isbyteZ bytes ->
     (length bits)%nat = 512%nat ->
     (length bytes)%nat = 64%nat -> (* removes firstn 16 (Zlist->intlist bytes) *)
 
@@ -464,7 +441,7 @@ Lemma hash_block_equiv :
                    (SHA256.hash_block REGS
                                       (SHA256.Zlist_to_intlist bytes))).
 Proof.
-  intros bits bytes regs REGS bits_blocksize bytes_blocksize regs_eq input_eq.
+  intros bits bytes regs REGS bytes_inrange bits_blocksize bytes_blocksize regs_eq input_eq.
   unfold sha_h.
   apply f_equal.
   apply f_equal.
@@ -475,30 +452,24 @@ Proof.
   rewrite -> bytes_bits_bytes_id.
   rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
   reflexivity.
-  admit.
-  apply pure_lemmas.isbyte_intlist_to_Zlist. 
+  * apply bytes_inrange.
+  * apply pure_lemmas.isbyte_intlist_to_Zlist. 
 Qed.
 
-(* front/back equivalence theorems: stuck *)
+(* Front/back equivalence theorems *)
 
 (*NEW proof*) Lemma front_equiv :
-  (* forall (front back : Blist) (FRONT BACK : list int), *)
   forall (back : Blist) (BACK : list int) (front : Blist) (FRONT : list int),
-    (*not needed:Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->*)
     (length front)%nat = 512%nat ->
     (length FRONT)%nat = 16%nat ->
-    (*not needed InBlocks 512 front ->
-    InBlocks 16 FRONT ->
-    InBlocks 512 back ->
-    InBlocks 16 BACK ->*)         (* shouldn't need these two *)
     front ++ back = convert (FRONT ++ BACK) ->
     front = convert FRONT.
 Proof.
-  intros back BACK front FRONT (*range*) f_len F_len (*fblocks Fblocks bblocks Bblocks*) concat_eq.
+  intros back BACK front FRONT f_len F_len concat_eq.
   unfold convert in *.
   rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
-
   rewrite -> bytesToBits_app in concat_eq.
+
   assert (back = skipn 512 (front ++ back)).
     rewrite skipn_exact; trivial.
   assert (bytesToBits (intlist_to_Zlist BACK) = skipn 512 (front ++ back)).
@@ -509,80 +480,29 @@ Proof.
   eapply app_inv_tail. eassumption.
 Qed. 
 
-(*OLD PROOF ATTEMPT:
-  Lemma front_equiv :
-  (* forall (front back : Blist) (FRONT BACK : list int), *)
+Lemma back_equiv :
   forall (back : Blist) (BACK : list int) (front : Blist) (FRONT : list int),
-    Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
     (length front)%nat = 512%nat ->
     (length FRONT)%nat = 16%nat ->
-    InBlocks 512 front ->
-    InBlocks 16 FRONT ->
-    InBlocks 512 back ->
-    InBlocks 16 BACK ->         (* shouldn't need these two *)
     front ++ back = convert (FRONT ++ BACK) ->
-    front = convert FRONT.
+    back = convert BACK.
 Proof.
-  intros back BACK front FRONT range f_len F_len fblocks Fblocks bblocks Bblocks concat_eq.
+  intros back BACK front FRONT f_len F_len concat_eq.
+  assert (front ++ back = convert (FRONT ++ BACK)) as concat_eq'. apply concat_eq.
   unfold convert in *.
   rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
-  (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
   rewrite -> bytesToBits_app in concat_eq.
 
-  (* my proof:
-  concat_eq : front ++ back =
-              bytesToBits (intlist_to_Zlist FRONT) ++
-              bytesToBits (intlist_to_Zlist BACK)
-
-  x0 :: ... :: x511 :: back = x0' :: ... :: x511' :: convert BACK
-
-  BACK is the right length such that the overall lists are the same length
-    why? we know that
-    full = convert FULL so 
-    length (front ++ back) = 32 * length (FRONT ++ BACK)
-  thus, by list equality, xn = xn' (otherwise, contradiction)
-
-  x0 :: ... :: x511 = x0' :: ... :: x511'
-  front = convert FRONT
-
-and back = convert BACK
- *)
-
-  (* but induction on the front needs to be in pairs? can't pair each one-cons
-     somehow have to use InBlocks for both AND the length constraint
-     (each is exactly one block)
-   *)
-  revert FRONT back BACK Fblocks bblocks Bblocks range f_len F_len concat_eq.
-  induction fblocks; intros.
-  -
-    revert back BACK bblocks Bblocks range f_len F_len concat_eq; induction Fblocks; intros.
-    *
-      reflexivity.
-    *
-      simpl in *.
-      omega.
-  -
-    (* what to induct on here? fronts/backs confusing *)
-    revert back0 back BACK front full fblocks bblocks Bblocks range f_len F_len concat_eq
-           H H0 IHfblocks.
-    (* need to figure out how to name induction *)
-    induction Fblocks.
-    *
-      intros.
-      simpl in *.
-      omega.
-    *
-      (* look at the intros here *)
-      intros.
-      rewrite -> H0 in *.
-      rewrite -> H2 in *.
-      (* frontFinal = front0 ++ back1; FRONTFINAL = front ++ back (confusing)  *)
-
-Admitted.
-*)
-(* don't induct on the back blocks -- induction case is unprovable 
-   see history for deleted notes
-*)
+  assert (front_eq : front = convert FRONT).
+    pose proof front_equiv back BACK front FRONT.
+    apply H.
+    * assumption.
+    * assumption.
+    * apply concat_eq'.
+    * rewrite -> front_eq in concat_eq.
+      unfold convert in *.
+      eapply app_inv_head. eassumption.
+Qed.
 
 (* --------- *)
     
@@ -655,37 +575,27 @@ Proof.
       rewrite -> H_skip_16.
 
       apply IHbit_blocks; auto; clear IHbytes_blocks IHbit_blocks.
-      +                         (* TODO: backs are equivalent *)
+      +
         rewrite -> H0 in inputs_eq.
         rewrite -> H2 in inputs_eq.
-        (* could refactor out the pose/destruct but leaves more stuff in context *)
-        (* pose proof blocks_equiv front0 back0 front back as blocks_equiv. *)
-        (* destruct blocks_equiv. *)
-        (* apply inputs_eq. *)
-        (* apply H4. *)
-        admit.
-      +
+        apply (back_equiv back0 back front0 front H1 H inputs_eq).
+      + 
         pose proof hash_block_equiv as hash_block_equiv.
         specialize (hash_block_equiv front0 (SHA256.intlist_to_Zlist front) acc ACC).
         rewrite -> hash_block_equiv; auto. clear hash_block_equiv.
         rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
         reflexivity.
+        { apply pure_lemmas.isbyte_intlist_to_Zlist. }
         {
           rewrite -> pure_lemmas.length_intlist_to_Zlist.
           rewrite -> H.
           omega.
         }
         {
-          (* TODO: prove the fronts are equivalent *)
           rewrite -> H0 in inputs_eq.
           rewrite -> H2 in inputs_eq.
 
           (*NEW*) apply (front_equiv back0 back front0 front H1 H inputs_eq).
-
-          (* pose proof blocks_equiv front0 back0 front back as blocks_equiv. *)
-          (* destruct blocks_equiv. *)
-          (* apply inputs_eq. *)
-          (* apply H3. *)
         }
      +
        rewrite -> H0. rewrite -> app_length. rewrite -> H. omega.
@@ -756,7 +666,8 @@ Proof.
         apply bytes_bits_ind_comp in input_eq.
         rewrite -> input_eq.
         reflexivity.
-        + eapply bytesBitsLists_isbyteZ. eassumption.
+        + 
+          eapply bytesBitsLists_isbyteZ. eassumption.
         +
           pose proof pad_len_64_nat bytes as pad_len_64.
           destruct pad_len_64.
