@@ -1,5 +1,6 @@
 Set Implicit Arguments.
 
+Require Import Axioms.
 
 Require Import Bvector.
 Require Import List.
@@ -8,6 +9,7 @@ Require Import Arith.
 Require Import HMAC_spec_concat.
 Require Import ByteBitRelations.
 Require Import sha_padding_lemmas.
+Require Import pure_lemmas.
 Require Import common_lemmas.
 
 Module HMAC_List.
@@ -140,7 +142,7 @@ Qed.
 *)
 
 
-(*NEW*) Lemma InBlocks_Forall_512 b: (InBlocks 512 b) ->
+Lemma InBlocks_Forall_512 b: (InBlocks 512 b) ->
       Forall (fun x : list bool => length x = 512%nat) (toBlocks b).
 Proof. intros.
   remember (toBlocks b). generalize dependent b.
@@ -155,7 +157,7 @@ Proof. intros.
   subst l. apply (IHl _ H2 (eq_refl _)).
 Qed.
 
-(*NEW*) Lemma sha_splitandpad_blocks_512 m:
+Lemma sha_splitandpad_blocks_512 m:
       Forall (fun x => length x = 512%nat) (sha_splitandpad_blocks m).
 Proof. apply InBlocks_Forall_512. apply sha_splitandpad_inc_InBlocks. 
 Qed.
@@ -184,32 +186,31 @@ Proof.
   apply InBlocks_len. rewrite HK. exists k. omega.
 Qed.
 
-(*NEW*) Lemma length_mul_split A k (K:(0<k)%nat) n (N:(0<n)%nat): forall (l:list A), length l = (k * n)%nat -> 
+
+Lemma saP_eq: sha_splitandpad_inc = sha_splitandpad_inc'.
+Proof. extensionality m.
+  apply sha_splitandpad_inc_eq. 
+Qed.
+
+Lemma length_mul_split A k (K:(0<k)%nat) n (N:(0<n)%nat): forall (l:list A), length l = (k * n)%nat -> 
       exists l1, exists l2, l=l1++l2 /\ length l1=n /\ length l2 = ((k-1) * n)%nat.
 Proof.
   intros. 
   assert ((k * n = n + (k-1) * n)%nat). rewrite mult_minus_distr_r. simpl. rewrite plus_0_r.  
       rewrite NPeano.Nat.add_sub_assoc. rewrite minus_plus. trivial.
-      SearchAbout le mult. specialize (mult_le_compat_r 1 k n). simpl; rewrite plus_0_r. simpl; intros. apply H0. omega.
+      specialize (mult_le_compat_r 1 k n). simpl; rewrite plus_0_r. simpl; intros. apply H0. omega.
   rewrite H0 in H; clear H0. 
   apply (list_splitLength _ _ _ H).
 Qed.   
 
-(*NEW, should be put into pure_lemmas or so *) Lemma skipn_short {A}: forall n (l:list A), (length l <= n)%nat -> skipn n l = nil.
-Proof. induction n; simpl; intros. 
-  destruct l; trivial. simpl in H. omega.
-  destruct l; trivial.
-  apply IHn. simpl in H. omega.
-Qed.
-
-(*NEW*) Lemma concat_length {A}: forall L (l:list A), In l L -> (length (concat L) >= length l)%nat.
+Lemma concat_length {A}: forall L (l:list A), In l L -> (length (concat L) >= length l)%nat.
 Proof.  unfold concat. induction L; simpl; intros. contradiction.
   rewrite app_length. 
   destruct H; subst. unfold id. omega.
   specialize (IHL _ H). omega.
 Qed.
 
-(*NEW*) Lemma toBlocks_app_split l1 l2: length l1 = 512%nat ->
+Lemma toBlocks_app_split l1 l2: length l1 = 512%nat ->
       toBlocks (l1 ++ l2) = toBlocks l1 ++ toBlocks l2.
 Proof. intros.
   rewrite toBlocks_equation. rewrite app_length. 

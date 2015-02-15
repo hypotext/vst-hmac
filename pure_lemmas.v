@@ -25,6 +25,13 @@ Require Psatz.
 
 Global Opaque CBLOCKz LBLOCKz.
 
+Lemma skipn_short {A}: forall n (l:list A), (length l <= n)%nat -> skipn n l = nil.
+Proof. induction n; simpl; intros. 
+  destruct l; trivial. simpl in H. omega.
+  destruct l; trivial.
+  apply IHn. simpl in H. omega.
+Qed.
+
 Lemma Zlength_length:
   forall A (al: list A) (n: Z),
     0 <= n ->
