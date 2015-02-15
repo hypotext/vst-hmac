@@ -296,7 +296,7 @@ Proof.
 Admitted. -- in comment
 *)
 
-(* TODO: will prove that the list equivalents have this type *)
+(* *** TODO: need to prove that the list equivalents have this type *** *)
 Parameter h_v : Bvector c -> Bvector b -> Bvector c.
 Parameter iv_v : Bvector c.
 Parameter splitAndPad_v : Blist -> list (Bvector b).
@@ -324,7 +324,7 @@ Qed.
 
 (* iv *)
 Lemma iv_eq : sha_iv = Vector.to_list iv_v.
-Admitted. (*Axiom on iv?*)
+Admitted. (*Axiom on iv? at least prove that the sha_iv has the correct length/type *)
 
 (* h *)
 (*Lemma h_eq : forall (block_v : Bvector b) (block_l : Blist),
@@ -407,6 +407,24 @@ Proof.
 Qed.   
 *)
 
+(* TODO: Here, need lemma relating sha_splitandpad_blocks and sha_splitandpad_inc
+such that the below is true *)
+
+Lemma length_splitandpad_inner : forall (m : Blist),
+   Forall2
+     (fun (bv : Vector.t bool b) (bl : list bool) => bl = Vector.to_list bv)
+     (splitAndPad_v m) (sha_splitandpad_blocks m).
+Proof.
+  intros.
+  (* unfold splitAndPad_v. *)
+  (* doesn't exist yet -- axiom? *)
+  unfold sha_splitandpad_blocks.
+  unfold sha_splitandpad_inc.
+  
+
+
+Admitted.
+
 Lemma SPLIT: forall m (v2 : Bvector m) n (v1 : Bvector n),
       HMAC_Abstract.splitVector n m (Vector.append v1 v2)  = (v1, v2).
 Proof.
@@ -417,41 +435,47 @@ Proof.
 Qed.
 
 (* TODO: opad and ipad should be in HMAC_common_parameters (factor out of all spec) *)
+(* also, op and opad_v, etc. are related -- make explicit *)
 Theorem HMAC_eq : forall (kv : Bvector b) (kl m op ip : Blist),
                     kl = Vector.to_list kv ->
+                    op = Vector.to_list opad_v ->
+                    ip = Vector.to_list ipad_v ->
                     HMAC_List.HMAC c p sha_h sha_iv sha_splitandpad_blocks fpad op ip kl m
                     = Vector.to_list
                         (HMAC_Abstract.HMAC h_v iv_v splitAndPad_v
                                             fpad_v opad_v ipad_v kv m).
 Proof.
-  intros kv kl m op ip keys_eq.
+  intros kv kl m op ip keys_eq op_eq ip_eq.
   unfold HMAC_List.HMAC. unfold HMAC_Abstract.HMAC.
   unfold HMAC_List.HMAC_2K. unfold HMAC_Abstract.HMAC_2K.
   unfold HMAC_List.GHMAC_2K. unfold HMAC_Abstract.GHMAC_2K.
   subst.
   rewrite SPLIT.
-  apply hash_words_eq.
+  (* rewrite -> split_append_id. *) (* could use this instead of firstn and splitn *)
+  apply hash_words_eq. Check hash_words_eq. Print Forall2.
   constructor.
     rewrite firstn_exact.
-    apply xor_eq. trivial. admit. (*Need assumption: op = Vector.to_list opad_v ?*)
-    apply BLxor_length. 
-       admit. (*Need assumption length (Vector.to_list kv) = HMAC_List.b c p?*) 
-       admit. (*Need assumption length op = HMAC_List.b c p - maybe follows from eariler assumption on op and opad_v*)
+    apply xor_eq. trivial. reflexivity. 
+    apply BLxor_length.
+    unfold HMAC_List.b. unfold b in *.
+    apply VectorToList_length.
+    apply VectorToList_length.
   rewrite skipn_exact. 
-       2: admit. (*Again, need assumption from above*)
+       2: apply BLxor_length.
+          2: apply VectorToList_length.
+          2: apply VectorToList_length.
        2: apply iv_eq.
   constructor. 2: constructor.
   apply app_fpad_eq.
   apply hash_words_eq.
     constructor.
       apply xor_eq. trivial.
-      admit. (*Need assuption ip ipad_v*)
-      admit. (*Need axiom relating splitAndPad_v and sha_splitandpad_blocks*)
+      reflexivity.
+      apply length_splitandpad_inner.
     apply iv_eq.
 Qed.
 
 (* Framework for abstract:
->>>>>>> ff9e185599ec321fe86911f8cf9d70a17e42c407
 
 v2l (V.append a b) = v2l a ++ v2l b
 keep composing these functions, and the v2ls should "pop out"
