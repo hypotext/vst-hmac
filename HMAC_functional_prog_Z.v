@@ -198,25 +198,6 @@ Proof.
    destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. omega.
 Qed.
 
-(*Old proof attempt:
-Theorem xor_inrange : forall (x y : Z),
-                        x = x mod Byte.modulus
-                        -> y = y mod Byte.modulus
-                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
-Proof.
-  intros.
-  (* x = x mod Byte.modulus implies x in range *)
-  assert (x_inrange : 0 <= x < 10). admit. -- ok, in comment
-  assert (y_inrange : 0 <= y < 10). admit. -- ok, in comment
-  (* prove by brute force over x and y being in range *)
-  (* TODO: runs out of memory when upper bound is 256; takes a long time even at 40 *)
-  Opaque Z.lxor.
-  
-  (* doesn't work w/ omega as tactic; simpl is necessary? *)
-  do_range x_inrange simpl; do_range y_inrange reflexivity.
-Admitted. -- ok, in comment
-*)
-
 Lemma mkArgZ_mkArg_eq : forall (pad : Z) (k : list Z),
    HP.HMAC_SHA256.mkArgZ (map Byte.repr (HP.HMAC_SHA256.mkKey k))
      (Byte.repr pad) = HMAC_SHA256.mkArg (HMAC_SHA256.mkKey k) pad.
