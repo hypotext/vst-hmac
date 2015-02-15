@@ -21,15 +21,9 @@ Proof. apply firstn_precise. simpl. reflexivity. Qed.
 
 Lemma length_SF {A} (x:A): length (HMAC_progZ.HMAC_SHA256.sixtyfour x) = 64%nat.
 Proof.
-  Print HMAC_progZ.HMAC_SHA256.sixtyfour.
   unfold HMAC_progZ.HMAC_SHA256.sixtyfour.
-  Locate list_repeat.
-  Locate Zlength.
-  Locate map.
   rewrite length_list_repeat; trivial.
 Qed.
-
-Locate HMAC_progZ.HMAC_SHA256.sixtyfour.
 
 (* TODO: mkArgZ removed
 Lemma Zlength_mkArgZ k pad: Zlength (HMAC_progZ.HMAC_SHA256.mkArgZ k pad) = Z.of_nat (min (length k) 64).
@@ -160,6 +154,10 @@ Qed.
 
 Lemma isbyte_sha x: Forall isbyteZ (functional_prog.SHA_256' x).
 Proof. apply isbyte_intlist_to_Zlist. Qed.
+
+Lemma isbyte_hmac ipad opad m k: 
+   Forall isbyteZ (HMAC_functional_prog.HP.HMAC_SHA256.HMAC ipad opad m k).
+Proof. apply isbyte_sha. Qed.
 
 (* s256a_len from spec_sha *)
 (*
