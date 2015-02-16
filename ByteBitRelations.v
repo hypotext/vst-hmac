@@ -79,6 +79,9 @@ Fixpoint bitsToBytes (bits : Blist) : list Z :=
 
 (* -------------------- Various theorems and lemmas *)
 
+Lemma byteToBits_length bt: length (byteToBits bt) = 8%nat.
+Proof. reflexivity. Qed.
+
 Lemma bytes_bits_length : forall (bits : Blist) (bytes : list Z),
   bytes_bits_lists bits bytes -> length bits = (length bytes * 8)%nat.
 Proof.

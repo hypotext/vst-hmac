@@ -10,6 +10,10 @@ Require Import Arith.
 Require Import HMAC_spec_list.
 Require Import HMAC_common_defs.
 
+Lemma fold_left_cons {A B} (f: A -> B -> A) l b x: 
+      fold_left f (x :: l) b = fold_left f l (f b x).
+Proof. reflexivity. Qed.
+
 Definition Vector_0_is_nil (T : Type) (v : Vector.t T 0) : v = Vector.nil T := 
   match v with Vector.nil => eq_refl end.
 
@@ -189,127 +193,30 @@ Theorem app_eq : forall (n : nat) (v1 v2 : Bvector n),
 Proof.
   intros. apply app_eq'.
 Qed. 
-(*
-Check HMAC_Abstract.splitVector.
-Definition sV (n m k:nat) (NM: k = n+m) (v:Bvector k) : Bvector n * Bvector m.
- subst k.
- apply (@HMAC_Abstract.splitVector bool n m v).
-Defined.
-Definition myP: forall (k : nat) (v:Vector.t bool k), Type.
-intros.
-apply (forall n m (NM: k=n+m), 
-                   splitList n (Vector.to_list v) = match sV _ _ NM v with (L,R) =>
-                     (Vector.to_list L,
-                      Vector.to_list R) end).
-Defined.
 
-Theorem split_eq : forall (k : nat) (v : Bvector k) n m (NM:k=n+m),
-                   splitList n (Vector.to_list v) = match sV _ _ NM v with (L,R) =>
-                     (Vector.to_list L,
-                      Vector.to_list R) end.
-Proof. intros n m.
- apply (Vector.t_rect bool myP); unfold myP, sV; intros.
-   assert (n0 = 0 /\ m0 = 0). eapply plus_is_O. rewrite <- NM; trivial.
-   destruct H. subst n0 m0. simpl. unfold eq_rec_r, eq_rec, eq_rect. simpl.
-    remember (eq_sym NM). destruct e. in (_ = y) return (Bvector y -> Bvector 0 * Bvector 0)). 
-   simpl. 
-  apply H.
- Check (@Vector.t_rec bool). eapply (@Vector.t_rec bool).
-Print Vector.
- intros k v.
-  eapply Vector.t_rec. 3: eassumption.
-  intros n. induction n. reflexivity. 
-  unfold Bvector. 
-  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
-apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
-Print splitList.
-Theorem split_eq : forall (k : nat) (v : Bvector k) n m (NM:k=n+m) (v1: Bvector n),
-                   splitList n (Vector.to_list v) =
-                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v1)),
-                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v2))).
+Lemma split_eq: forall m (v2 : Bvector m) n (v1 : Bvector n),
+      HMAC_Abstract.splitVector n m (Vector.append v1 v2)  = (v1, v2).
 Proof.
-  intros n. induction n. reflexivity. 
-  unfold Bvector. 
-  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
-apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
-Print splitList.
+  intros m v2.
+  eapply Vector.t_rec.
+  reflexivity.
+  intros. simpl. rewrite H. trivial.
+Qed.
 
-Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
-                   splitList n (Vector.to_list v) =
-                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v)),
-                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v))).
-Proof.
-  intros n. induction n. reflexivity. 
-  unfold Bvector. 
-  intros m v. assert (S n + m = S (n+m)) by omega. rewrite H in v. rewrite Sn_plus. 
-apply Vector.caseS. intros. unfold splitList. simpl. Print Vector. caseS. destruct v.
-Print splitList.
-Lemma X {A}: forall n (l:list A), 
-  splitList (S n) l = match splitList n l with (x,y::t) => (x ++ (y::nil), t) | _ => end.
-  unfold splitList.
-  apply Vector.t_rec. simpl. reflexivity.
-  Defintion myP: forall k, Bvector k -> 
-Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
-                   splitList n (Vector.to_list v) =
-                     (Vector.to_list (fst (HMAC_Abstract.splitVector n m v)),
-                      Vector.to_list (snd (HMAC_Abstract.splitVector n m v))).
-Proof.
-  intros n m v. 
-  eapply (Vector.t_rec bool). Focus 3.
-  split.
-  * 
-    unfold splitList.
-    unfold HMAC_Abstract.splitVector.
-    simpl.
 
-Admitted.-- in comment
-Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)),
-                     fst (splitList n (Vector.to_list v)) =
-                     Vector.to_list (fst (HMAC_Abstract.splitVector n m v))
-                     /\
-                     snd (splitList n (Vector.to_list v)) =
-                     Vector.to_list (snd (HMAC_Abstract.splitVector n m v)).
-Proof.
-  intros n m v l vl_eq.
-  split.
-  * 
-    unfold splitList.
-    unfold HMAC_Abstract.splitVector.
-    simpl.
-
-Admitted.-- in comment
-Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)) (l : Blist),
-                     l = Vector.to_list v ->
-                     fst (splitList n l) =
-                     Vector.to_list (fst (HMAC_Abstract.splitVector n m v))
-                     /\
-                     snd (splitList n l) =
-                     Vector.to_list (snd (HMAC_Abstract.splitVector n m v)).
-Proof.
-  intros n m v l vl_eq.
-  split.
-  * 
-    unfold splitList.
-    unfold HMAC_Abstract.splitVector.
-    simpl.
-
-Admitted. -- in comment
-*)
+Section HMAC_AbstractEQ.
 
 (* *** TODO: need to prove that the list equivalents have this type *** *)
-Parameter h_v : Bvector c -> Bvector b -> Bvector c.
-Parameter iv_v : Bvector c.
-Parameter splitAndPad_v : Blist -> list (Bvector b).
-Parameter fpad_v : Bvector c -> Bvector p. 
-Parameter opad_v ipad_v : Bvector b.
+Variable h_v : Bvector c -> Bvector b -> Bvector c.
+Variable iv_v : Bvector c.
+Variable splitAndPad_v : Blist -> list (Bvector b).
+Variable fpad_v : Bvector c -> Bvector p. 
+Variable opad_v ipad_v : Bvector b.
 
 (* TODO: prove fpad has right type *)
-Lemma fpad_eq : forall (v : Bvector c) (l : Blist),
+Hypothesis fpad_eq : forall (v : Bvector c) (l : Blist),
                   l = Vector.to_list v ->
                   fpad l = Vector.to_list (fpad_v v).
-Proof.
-  intros v l inputs_eq.
-Admitted.  (*Axiom on fpad?*)
 
 Lemma app_fpad_eq : forall (v : Bvector c) (l : Blist),
                       l = Vector.to_list v ->
@@ -323,49 +230,25 @@ Proof.
 Qed.     
 
 (* iv *)
-Lemma iv_eq : sha_iv = Vector.to_list iv_v.
-Admitted. (*Axiom on iv? at least prove that the sha_iv has the correct length/type *)
+Hypothesis iv_eq : sha_iv = Vector.to_list iv_v.
 
 (* h *)
-(*Lemma h_eq : forall (block_v : Bvector b) (block_l : Blist),
-               block_l = Vector.to_list block_v ->
-               sha_h sha_iv block_l = Vector.to_list (h_v iv_v block_v).
-Proof.
-  intros block_v block_l blocks_eq.
-  pose proof iv_eq as iv_eq.
-  subst.
-  rewrite -> iv_eq.
-  
-Admitted. -- in comment
-*)
-
-(*Lennart: lemma hash_words_eq below needs the following strionger version, where we
-  also universally quantify over sha_iv and iv_v*)
-Lemma h_eq  (block_v : Bvector b) (block_l : Blist)
+Hypothesis h_eq : forall (block_v : Bvector b) (block_l : Blist)
                (HVL: block_l = Vector.to_list block_v)
-               ivA ivB (IV: ivA = Vector.to_list ivB):
+               ivA ivB (IV: ivA = Vector.to_list ivB),
                sha_h ivA block_l = Vector.to_list (h_v ivB block_v).
-Admitted. (*Axiom on H_eq?*)
 
-Lemma fold_left_cons {A B} (f: A -> B -> A) l b x: 
-      fold_left f (x :: l) b = fold_left f l (f b x).
-Proof. reflexivity. Qed.
-
-(* also h_star *) 
+(* h_star *) 
 Lemma hash_words_eq : forall (v : list (Bvector b)) (l : list Blist)
-                        (* TODO: figure out how to state equivalence between v and l *)
-                      (*l = Vector.to_list v -> *)
                       (HVL: Forall2 (fun bv bl => bl = Vector.to_list bv) v l)
                       ivA ivB (IV: ivA = Vector.to_list ivB),
                       HMAC_List.hash_words sha_h ivA l =
                       Vector.to_list (HMAC_Abstract.hash_words p h_v ivB v).
 Proof.
-  (*apply (Vector.t_rec bool).*)
-  intros v l. (* inputs_eq.*)
+  intros v l.
   unfold HMAC_List.hash_words. unfold HMAC_Abstract.hash_words.
   unfold HMAC_List.h_star. unfold HMAC_Abstract.h_star.
   generalize dependent v.
-(*  eapply (Vector.t_rec bool).*)
   induction l as [ | bl bls].
   * simpl; intros. inversion HVL; clear HVL. subst v. simpl. assumption.
   * intros. inversion HVL; clear HVL. subst.
@@ -374,65 +257,14 @@ Proof.
     rewrite fold_left_cons. apply IHbls. apply h_eq; trivial.
 Qed.
 
-(*Lennart: old proof: 
-Lemma hash_words_eq : forall (v : list (Bvector b)) (l : list Blist),
-                        (* TODO: figure out how to state equivalence between v and l *)
-                      (*l = Vector.to_list v -> *)
-                      HMAC_List.hash_words sha_h sha_iv l =
-                      Vector.to_list (HMAC_Abstract.hash_words p h_v iv_v v).
-Proof.
-  (*apply (Vector.t_rec bool).*)
-  intros v l. (* inputs_eq.*)
-  unfold HMAC_List.hash_words. unfold HMAC_Abstract.hash_words.
-  unfold HMAC_List.h_star. unfold HMAC_Abstract.h_star.
-  generalize dependent v.
-(*  eapply (Vector.t_rec bool).*)
-  induction l as [ | bl bls].
-  *
-    admit.-- in comment
-  *
-    intros v. generalize dependent bl.
-    generalize dependent bls. induction v as [| bv bvs].
-    -
-      intros.
-      simpl.
-      admit.-- in comment
-    - intros.
-      simpl.
-      (* apply IHbls. *)
-      (* TODO order of params? *)
-      (* TODO each element of v and l are equal, and the lists themselves are the same length *)
-      (* TODO should be able to use h_eq *)
-      admit. -- in comment
-Qed.   
-*)
 
 (* TODO: Here, need lemma relating sha_splitandpad_blocks and sha_splitandpad_inc
 such that the below is true *)
 
-Lemma length_splitandpad_inner : forall (m : Blist),
+Hypothesis length_splitandpad_inner : forall (m : Blist),
    Forall2
      (fun (bv : Vector.t bool b) (bl : list bool) => bl = Vector.to_list bv)
      (splitAndPad_v m) (sha_splitandpad_blocks m).
-Proof.
-  intros.
-  (* unfold splitAndPad_v. *)
-  (* doesn't exist yet -- axiom? *)
-  unfold sha_splitandpad_blocks.
-  unfold sha_splitandpad_inc.
-  
-
-
-Admitted.
-
-Lemma SPLIT: forall m (v2 : Bvector m) n (v1 : Bvector n),
-      HMAC_Abstract.splitVector n m (Vector.append v1 v2)  = (v1, v2).
-Proof.
-  intros m v2.
-  eapply Vector.t_rec.
-  reflexivity.
-  intros. simpl. rewrite H. trivial.
-Qed.
 
 (* TODO: opad and ipad should be in HMAC_common_parameters (factor out of all spec) *)
 (* also, op and opad_v, etc. are related -- make explicit *)
@@ -450,9 +282,9 @@ Proof.
   unfold HMAC_List.HMAC_2K. unfold HMAC_Abstract.HMAC_2K.
   unfold HMAC_List.GHMAC_2K. unfold HMAC_Abstract.GHMAC_2K.
   subst.
-  rewrite SPLIT.
+  rewrite split_eq.
   (* rewrite -> split_append_id. *) (* could use this instead of firstn and splitn *)
-  apply hash_words_eq. Check hash_words_eq. Print Forall2.
+  apply hash_words_eq. 
   constructor.
     rewrite firstn_exact.
     apply xor_eq. trivial. reflexivity. 
@@ -474,6 +306,8 @@ Proof.
       apply length_splitandpad_inner.
     apply iv_eq.
 Qed.
+
+End HMAC_AbstractEQ.
 
 (* Framework for abstract:
 

@@ -65,10 +65,8 @@ Lemma fstpad_len :
 Proof.
   intros msg.
   simpl.
-  SearchAbout length.
   rewrite -> app_length.
   simpl.
-  SearchAbout list_repeat.
   rewrite -> length_list_repeat.
   reflexivity.
 Qed.  
