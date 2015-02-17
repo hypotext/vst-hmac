@@ -13,7 +13,7 @@ Require Import HMAC_spec_list.
 Require Import HMAC_spec_abstract.
 
 
-(*Duplicates the definition in Blist.v - could eliminate this after merging with FCF*)
+(* TODO Duplicates the definition in Blist.v - could eliminate this after merging with FCF*)
 Definition of_list_length (A : Set)(m : nat)(ls : list A)(pf : length ls = m) : Vector.t A m :=
   match pf with
     | eq_refl => Vector.of_list ls
@@ -161,14 +161,17 @@ Lemma length_splitandpad_inner m :
      (splitAndPad_v m) (sha_splitandpad_blocks m).
 Proof. apply length_splitandpad_inner_aux. Qed.
 
-Lemma Equivalence kv m 
-      (LM: NPeano.divide 8 (length m))
-      (LK: length (Vector.to_list kv) = b):
+(* Note implicit assumption that the key is of the right length *)
+Lemma Equivalence : forall (kv : Bvector b) (m : Blist),
+      NPeano.divide 8 (length m) ->
       Vector.to_list (HMAC_Abstract.HMAC h_v iv_v splitAndPad_v
                       fpad_v opad_v ipad_v kv m) = 
       bytesToBits (HP.HMAC256 (bitsToBytes m)
                               (bitsToBytes (Vector.to_list kv))).
-Proof. intros.
+Proof.
+  intros kv m LM.
+  assert (LK : length (Vector.to_list kv) = b).
+    { apply VectorToList_length. }
   erewrite <- HMAC_eq; try reflexivity.
   2: apply fpad_eq.
   2: apply h_eq.
@@ -186,28 +189,37 @@ Proof. intros.
   Focus 7.  reflexivity.
   Focus 7. symmetry. apply HMAC_functional_prog_Z.HMAC_progZ.HMAC_functional_prog_Z_equiv.
 
+  (* key length *)
   { rewrite bitsToBytes_len_gen with (n:=64%nat). 
     reflexivity.
     rewrite LK; reflexivity. }
 
+  (* key length *)
   { rewrite bitsToBytes_len. reflexivity. apply LK. }
 
-  { apply bytes_bits_comp_ind. trivial.
+  (* TODO: maybe replace bytes_bits_lists with bytesToBits? Since bytes_bits_comp_ind
+     is used a lot *)
+
+  (* key *)
+  { apply bytes_bits_comp_ind. 
     eapply HMAC_spec_pad.HMAC_Pad.bitsToBytes_isbyteZ; reflexivity.
     rewrite  bits_bytes_bits_id; trivial.
     apply HMAC_spec_concat.block_8. assumption. }
 
+  (* uses fact that message is in blocks of 8 *)
   { apply bytes_bits_comp_ind.
     eapply HMAC_spec_pad.HMAC_Pad.bitsToBytes_isbyteZ; reflexivity.
     rewrite bits_bytes_bits_id; trivial. 
     apply sha_padding_lemmas.InBlocks_len; trivial. }
 
+  (* opad *)
   { apply bytes_bits_comp_ind.
     apply pure_lemmas.Forall_list_repeat. unfold HMAC_functional_prog_Z.HMAC_progZ.Opad. omega.
     unfold opad_v, of_list_length.
-      destruct opad_length.  
+      destruct opad_length.
       apply Vector.to_list_of_list_opp. }
 
+  (* ipad *)
   { apply bytes_bits_comp_ind. 
     apply pure_lemmas.Forall_list_repeat. unfold HMAC_functional_prog_Z.HMAC_progZ.Ipad. omega.
     unfold ipad_v, of_list_length.
