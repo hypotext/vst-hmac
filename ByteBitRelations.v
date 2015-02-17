@@ -43,9 +43,6 @@ Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
 Definition div_mod (num : Z) (denom : Z) : bool * Z :=
   (Z.gtb (num / denom) 0, num mod denom).
 
-Eval compute in div_mod 129 128.
-Eval compute in div_mod 1 64.
-
 Definition byteToBits (byte : Z) : Blist :=
   let (b7, rem7) := div_mod byte 128 in
   let (b6, rem6) := div_mod rem7 64 in

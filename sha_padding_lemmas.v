@@ -233,25 +233,6 @@ Qed.
 Definition fulllen (len : Z) :=
   len + 1%Z + (- (len + 9) mod 64).
 
-Eval compute in fulllen 0.      (* 56 / 4 = 14 32-bit ints;
-                                   56 + 8 = 64 bytes;
-                                   64 / 4 = 16 32-bit ints;
-                                   16 * 32 = 512 bits; 512 / 256 = 2 blocks of length 256 *)
-Eval compute in fulllen 1.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 2.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 55.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 56.      (* 120 / 4 = 30 *)
-Eval compute in fulllen 119.     (* 120 *)
-Eval compute in fulllen 120.    (* 184 *)
-Eval compute in fulllen 121.
-Eval compute in fulllen 200.    (* 248 + 8 = 256 *)
-
-Eval compute in (-1) mod 5.
-(* SearchAbout modulo. *)
-(* SearchAbout mod. *)
-
-(* C-c C-l *)
-
 Lemma app_left : forall (a b c d : list Z),
    a ++ b ++ c ++ d = (a ++ b ++ c) ++ d.
 (* a ++ (b ++ (c ++ d)) = (a ++ (b ++ c)) ++ d *)
