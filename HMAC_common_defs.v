@@ -1,13 +1,14 @@
-Require Import HMAC_functional_prog.
-Require Import SHA256.
-Require Import ByteBitRelations.
 Require Import Integers.
-Require Import sha_padding_lemmas.
 Require Import Recdef.
 Require Import List.
 Require Import Arith.
 Require Import Coqlib.
 Require Import pure_lemmas.
+Require Import SHA256.
+Require Import hmac_pure_lemmas.
+Require Import ByteBitRelations.
+Require Import HMAC_functional_prog.
+Require Import sha_padding_lemmas.
 
 Definition Blist := list bool.
 
@@ -99,32 +100,6 @@ Proof.
     omega.
 Qed.
 
-Lemma firstn_exact : 
-  forall {A : Type} (l1 l2 : list A) (n : nat),
-    (length l1 = n)%nat -> firstn n (l1 ++ l2) = l1.
-Proof.
-  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
-  * f_equal. apply IHl1. reflexivity.
-Qed.    
-
-Lemma skipn_exact :
-  forall {A : Type} (l1 l2 : list A) (n : nat),
-    (length l1 = n)%nat -> skipn n (l1 ++ l2) = l2.
-Proof.
-  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
-  * apply IHl1. reflexivity.
-Qed.
-
-Lemma length_not_emp :
-  forall {A B : Type} (l : list A) (z y : B),
-    (Datatypes.length l > 0)%nat -> match l with [] => z | _ => y end = y.
-Proof.
-  intros.
-  induction l as [ | x xs].
-  - inversion H.
-  - reflexivity.
-Qed.
-
 Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
                                length l1 = len -> length l2 = len ->
                                splitList len (l1 ++ l2) = (l1, l2).
@@ -162,20 +137,16 @@ Definition pad_inc (msg : list Z) : list Z :=
 Definition sha_splitandpad_inc (msg : Blist) : Blist :=
   bytesToBits (pad_inc (bitsToBytes msg)).
 
-(*NEW*) Require Import pure_lemmas.
-(*NEW*) Require Import Coqlib.
-(*NEW*) Require Import Integers.
-
-(*NEW*) Lemma sha_splitandpad_inc_nil: length (sha_splitandpad_inc nil) = 512%nat.
+Lemma sha_splitandpad_inc_nil: length (sha_splitandpad_inc nil) = 512%nat.
 Proof. reflexivity. Qed.
 
-(*NEW*) Lemma add_blocksize_length l n: 0<=n ->
+Lemma add_blocksize_length l n: 0<=n ->
       BinInt.Z.add n (Zcomplements.Zlength l) = Zcomplements.Zlength ((Coqlib.list_repeat (Z.to_nat n) true) ++ l).
 Proof. intros. do 2 rewrite Zlength_correct.
   rewrite app_length, length_list_repeat, Nat2Z.inj_add, Z2Nat.id; trivial.
 Qed. 
 
-(*NEW*) Lemma pad_inc_length: forall l, exists k, (0 < k /\ length (pad_inc l) = k*64)%nat.
+Lemma pad_inc_length: forall l, exists k, (0 < k /\ length (pad_inc l) = k*64)%nat.
 Proof. unfold pad_inc.
   induction l. 
   simpl. exists (1%nat). omega.
@@ -200,7 +171,7 @@ Proof. unfold pad_inc.
         rewrite BinInt.Z.add_assoc. f_equal.
           rewrite BinInt.Z.add_assoc. rewrite (BinInt.Z.add_comm 1). rewrite <- (BinInt.Z.add_assoc _ 1).
           f_equal. 
-          repeat rewrite Zcomplements.Zlength_correct. SearchAbout BinInt.Z.add BinInt.Z.of_nat.
+          repeat rewrite Zcomplements.Zlength_correct. 
           apply (Znat.Nat2Z.inj_add 1 (length l)).
    rewrite H in Heqn0; clear H. 
    remember (BinInt.Z.add (BinInt.Z.add BlockSize (Zcomplements.Zlength l)) 9). clear Heqz.
@@ -225,7 +196,7 @@ Proof. unfold pad_inc.
    omega. apply (Z2Nat.inj_le 1). omega. omega. omega.
 Qed. 
 
-(*NEW*) Lemma sha_splitandpad_inc_length: forall m, exists k, 
+Lemma sha_splitandpad_inc_length: forall m, exists k, 
       (0<k /\ length (sha_splitandpad_inc m) = k * 512)%nat.
 Proof. intros. unfold sha_splitandpad_inc.
   destruct (pad_inc_length (bitsToBytes m)) as [k [K HK]].
@@ -233,16 +204,16 @@ Proof. intros. unfold sha_splitandpad_inc.
 Qed.
 
 
-(*NEW*) Lemma sha_splitandpad_inc_InBlocks m : InBlocks 512 (sha_splitandpad_inc m).
+Lemma sha_splitandpad_inc_InBlocks m : InBlocks 512 (sha_splitandpad_inc m).
 Proof. intros. apply InBlocks_len.
   destruct (sha_splitandpad_inc_length m) as [k [K HK]].
   rewrite HK. exists k. trivial.
 Qed.
 
-(*NEW2*) Lemma sha_iv_length: length sha_iv = 256%nat.
+Lemma sha_iv_length: length sha_iv = 256%nat.
 Proof. reflexivity. Qed.
 
-(*NEW2*) Lemma hash_blocks_bits_len: forall r l, length r = 256%nat -> 
+Lemma hash_blocks_bits_len: forall r l, length r = 256%nat -> 
       InBlocks 512 l ->
       length (hash_blocks_bits sha_h r l) = 256%nat.
 Proof. intros r l.
@@ -261,3 +232,16 @@ Proof. intros r l.
     rewrite H3, skipn_exact. assumption. apply H2. 
 Qed.
 
+Lemma sha_h_length iv blk: length iv = c -> length blk = b ->
+      length (sha_h iv blk) = c.
+Proof. intros.
+ unfold sha_h, intsToBits.
+  rewrite bytesToBits_len, pure_lemmas.length_intlist_to_Zlist.
+  rewrite common_lemmas.length_hash_block. reflexivity.
+  unfold bitsToInts. erewrite pure_lemmas.length_Zlist_to_intlist. reflexivity. 
+  erewrite bitsToBytes_len_gen. reflexivity.
+  rewrite H; reflexivity.
+  unfold bitsToInts. erewrite pure_lemmas.length_Zlist_to_intlist. reflexivity. 
+  erewrite bitsToBytes_len_gen. reflexivity.
+  rewrite H0; reflexivity.
+Qed.

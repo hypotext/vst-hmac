@@ -6,6 +6,67 @@ Require Import Coqlib.
 
 Import ListNotations.
 
+Definition Forall_tl (A : Type) (P : A -> Prop) (a : A) (l : list A) 
+           (H : Forall P (a :: l)): Forall P l.
+Proof. inversion H. assumption. Defined. 
+
+Lemma Zlength_length:
+  forall A (al: list A) (n: Z),
+    0 <= n ->
+    (Zlength al = n <-> length al = Z.to_nat n).
+Proof.
+intros. rewrite Zlength_correct.
+split; intro.
+rewrite <- (Z2Nat.id n) in H0 by omega.
+apply Nat2Z.inj in H0; auto.
+rewrite H0.
+apply Z2Nat.inj; try omega.
+rewrite Nat2Z.id; auto.
+Qed.
+
+Lemma firstn_exact : 
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> firstn n (l1 ++ l2) = l1.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * f_equal. apply IHl1. reflexivity.
+Qed.    
+
+Lemma skipn_exact :
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> skipn n (l1 ++ l2) = l2.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * apply IHl1. reflexivity.
+Qed.
+
+Lemma length_not_emp :
+  forall {A B : Type} (l : list A) (z y : B),
+    (Datatypes.length l > 0)%nat -> match l with [] => z | _ => y end = y.
+Proof.
+  intros.
+  induction l as [ | x xs].
+  - inversion H.
+  - reflexivity.
+Qed.
+
+Lemma list_splitLength {A}: forall n (l:list A) m, 
+      length l = (n + m)%nat -> exists l1 l2, l = l1 ++ l2 /\ length l1 = n /\ length l2 = m.
+Proof. intros n.
+  induction n; simpl; intros.
+  exists [], l; eauto.
+  destruct l; simpl in H; inversion H. clear H.
+  destruct (IHn _ _ H1) as [l1 [l2 [L [L1 L2]]]]. clear IHn H1. subst.
+  exists (a :: l1), l2; auto.
+Qed.
+
+Lemma skipn_short {A}: forall n (l:list A), (length l <= n)%nat -> skipn n l = nil.
+Proof. induction n; simpl; intros. 
+  destruct l; trivial. simpl in H. omega.
+  destruct l; trivial.
+  apply IHn. simpl in H. omega.
+Qed.
+
 Lemma skipn_app2:
  forall A n (al bl: list A),
   (n >= length al)%nat ->

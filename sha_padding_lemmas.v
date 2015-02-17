@@ -4,16 +4,7 @@ Require Import Integers.
 (* Require Import HMAC_spec_harvard_concat. *)
 Require Import SHA256.
 Require Import functional_prog.
-
-Lemma list_splitLength {A}: forall n (l:list A) m, 
-      length l = (n + m)%nat -> exists l1 l2, l = l1 ++ l2 /\ length l1 = n /\ length l2 = m.
-Proof. intros n.
-  induction n; simpl; intros.
-  exists [], l; eauto.
-  destruct l; simpl in H; inversion H. clear H.
-  destruct (IHn _ _ H1) as [l1 [l2 [L [L1 L2]]]]. clear IHn H1. subst.
-  exists (a :: l1), l2; auto.
-Qed.
+Require Import hmac_pure_lemmas.
 
 (* Lemma 1: M = Prefix(Pad(M)) *)
 
@@ -129,20 +120,15 @@ Proof.
   rewrite -> Zlength_correct.
   rewrite -> length_list_repeat.
 
-  SearchAbout Z.of_nat.
-  SearchAbout (Z.of_nat (_ + _)).
   repeat rewrite -> Nat2Z.inj_add.
-  SearchAbout (Z.of_nat (Z.to_nat _)).
   rewrite -> Z2Nat.id.
 
   assert (move : forall (a b c : Z), a + (b + c) = (a + c) + b).
   intros. omega.
 
   rewrite -> move.
-(*  SearchAbout (_ + (_ mod _)).*)
   rewrite -> Zplus_mod_idemp_r.
 
-(*  SearchAbout (_ + (Z.of_nat _)).*)
   assert (Z_9 : 9 = Z.of_nat (9%nat)). reflexivity.
   rewrite -> Z_9.
 
@@ -153,13 +139,9 @@ Proof.
   rewrite -> H.
   reflexivity.
 
-  *
-    SearchAbout (0 <= _ mod _).
-    apply Z.mod_pos_bound.
+  * apply Z.mod_pos_bound.
     omega.
 Qed.
-
-SearchAbout roundup.
 
 (* more usable versions *)
 Lemma pad_len_64 : forall (msg : list Z), exists (n : Z),
@@ -189,8 +171,6 @@ Proof.
 
   assert (app_each : Z.to_nat (Z.of_nat (length (pad msg))) = Z.to_nat (64 * x)).
     rewrite -> H. reflexivity.
-
-  SearchAbout (Z.to_nat (Z.of_nat _)).
 
   rewrite -> Nat2Z.id in app_each.
 
@@ -271,7 +251,6 @@ Eval compute in (-1) mod 5.
 (* SearchAbout mod. *)
 
 (* C-c C-l *)
-SearchAbout Zlist_to_intlist.
 
 Lemma app_left : forall (a b c d : list Z),
    a ++ b ++ c ++ d = (a ++ b ++ c) ++ d.
@@ -330,10 +309,6 @@ Qed.
 
 (* Lemma 2: |M1| = |M2| -> |Pad(M1)| = |Pad(M2)| *)
 
-Print NPeano.divide.
-Print NPeano.div.
-Check NPeano.div.
-              
 Theorem length_equal_pad_length : forall (msg1 : list Z) (msg2 : list Z),
      Zlength msg1  = Zlength msg2 ->
      Zlength (generate_and_pad msg1) = Zlength (generate_and_pad msg2).

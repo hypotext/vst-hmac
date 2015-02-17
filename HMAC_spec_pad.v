@@ -15,6 +15,7 @@ Require Import XorCorrespondence.
 Require Import HMAC_functional_prog_Z.
 Require Import HMAC_common_defs.
 Require Import HMAC_common_lemmas.
+Require Import hmac_pure_lemmas.
 (* TODO remove useless imports *)
 
 Require Import Coq.Program.Basics. (* for function composition: ∘ *)

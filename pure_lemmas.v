@@ -25,27 +25,6 @@ Require Psatz.
 
 Global Opaque CBLOCKz LBLOCKz.
 
-Lemma skipn_short {A}: forall n (l:list A), (length l <= n)%nat -> skipn n l = nil.
-Proof. induction n; simpl; intros. 
-  destruct l; trivial. simpl in H. omega.
-  destruct l; trivial.
-  apply IHn. simpl in H. omega.
-Qed.
-
-Lemma Zlength_length:
-  forall A (al: list A) (n: Z),
-    0 <= n ->
-    (Zlength al = n <-> length al = Z.to_nat n).
-Proof.
-intros. rewrite Zlength_correct.
-split; intro.
-rewrite <- (Z2Nat.id n) in H0 by omega.
-apply Nat2Z.inj in H0; auto.
-rewrite H0.
-apply Z2Nat.inj; try omega.
-rewrite Nat2Z.id; auto.
-Qed.
-
 Lemma int_min_signed_eq: Int.min_signed = -2147483648.
 Proof. reflexivity. Qed.
 

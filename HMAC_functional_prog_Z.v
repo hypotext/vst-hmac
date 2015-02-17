@@ -7,6 +7,8 @@ Require Import HMAC_functional_prog.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Bruteforce.
 
+Require Import pure_lemmas.
+
 Module HMAC_progZ.
 
 (*SHA256: blocksize = 64bytes 
@@ -161,8 +163,6 @@ Proof.
       apply IHxs1.
 Qed.
 
-Require Import pure_lemmas.
-
 Theorem xor_inrange : forall (x y : Z),
                         x = x mod Byte.modulus
                         -> y = y mod Byte.modulus
@@ -185,25 +185,6 @@ Proof.
    rewrite Byte.Ztestbit_mod_two_p; try omega.
    destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. omega.
 Qed.
-
-(*Old proof attempt:
-Theorem xor_inrange : forall (x y : Z),
-                        x = x mod Byte.modulus
-                        -> y = y mod Byte.modulus
-                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
-Proof.
-  intros.
-  (* x = x mod Byte.modulus implies x in range *)
-  assert (x_inrange : 0 <= x < 10). admit. -- ok, in comment
-  assert (y_inrange : 0 <= y < 10). admit. -- ok, in comment
-  (* prove by brute force over x and y being in range *)
-  (* TODO: runs out of memory when upper bound is 256; takes a long time even at 40 *)
-  Opaque Z.lxor.
-  
-  (* doesn't work w/ omega as tactic; simpl is necessary? *)
-  do_range x_inrange simpl; do_range y_inrange reflexivity.
-Admitted. -- ok, in comment
-*)
 
 Lemma mkArgZ_mkArg_eq : forall (pad : Z) (k : list Z),
    HP.HMAC_SHA256.mkArgZ (map Byte.repr (HP.HMAC_SHA256.mkKey k))

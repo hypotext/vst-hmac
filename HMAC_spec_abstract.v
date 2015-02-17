@@ -7,8 +7,9 @@ Set Implicit Arguments.
 Require Import Bvector.
 Require Import List.
 Require Import Arith.
-Require Import HMAC_spec_list.
+Require Import hmac_pure_lemmas.
 Require Import HMAC_common_defs.
+Require Import HMAC_spec_list.
 
 Lemma fold_left_cons {A B} (f: A -> B -> A) l b x: 
       fold_left f (x :: l) b = fold_left f l (f b x).

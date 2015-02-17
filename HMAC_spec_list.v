@@ -11,6 +11,7 @@ Require Import ByteBitRelations.
 Require Import sha_padding_lemmas.
 Require Import pure_lemmas.
 Require Import common_lemmas.
+Require Import hmac_pure_lemmas.
 
 Module HMAC_List.
 

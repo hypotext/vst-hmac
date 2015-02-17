@@ -4,6 +4,7 @@ Require Import Coq.ZArith.Zcomplements. (* Zlength *)
 Require Import XorCorrespondence. (* Blist *)
 Require Import Integers.          (* byte *)
 Require Import Coq.Numbers.Natural.Peano.NPeano.
+Require Import hmac_pure_lemmas.
 Require Import HMAC_functional_prog_Z.
 
 Require Import Coq.Strings.Ascii.
@@ -191,12 +192,6 @@ Proof.
   assumption.
 Qed.
 
-
-Lemma FORALL A P: forall x (l:list A), Forall P (cons x l) -> Forall P l.
-Proof. intros.
-  apply Forall_forall; intros.
-  apply (Forall_forall P (x::l)); trivial. right. trivial. 
-Qed.
 Theorem bytes_bits_ind_comp : forall (bits : Blist) (bytes : list Z),
                                  Forall (fun b => 0 <= b < 256) bytes ->
                                  bytes_bits_lists bits bytes ->
@@ -211,7 +206,7 @@ Proof.
       f_equal. unfold convertByteBits in H.
         destruct H as [b8 [b9 [b10 [b11 [b12 [b13 [b14 [b15 [B BT]]]]]]]]]. 
         inversion B; clear B. subst. reflexivity.  
-    * eapply FORALL. eassumption. 
+    * eapply Forall_tl. eassumption. 
 Qed.
 
 Theorem bits_bytes_ind_comp : forall (bits : Blist) (bytes : list Z),
@@ -240,7 +235,7 @@ Proof.
     f_equal.
     apply bits_byte_bits_id.
 
-    eapply FORALL. eassumption. 
+    eapply Forall_tl. eassumption. 
 Qed.
     
 (* ----------------------------- *)
