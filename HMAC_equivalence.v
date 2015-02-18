@@ -161,13 +161,15 @@ Lemma length_splitandpad_inner m :
      (splitAndPad_v m) (sha_splitandpad_blocks m).
 Proof. apply length_splitandpad_inner_aux. Qed.
 
-(* Note implicit assumption that the key is of the right length *)
+(* Note implicit assumption that the key is of the right length
+   is now OK, since we're comapring to HP.HMAC_SHA256.HmacCore, not HMAC. *)
 Lemma Equivalence : forall (kv : Bvector b) (m : Blist),
       NPeano.divide 8 (length m) ->
       Vector.to_list (HMAC_Abstract.HMAC h_v iv_v splitAndPad_v
                       fpad_v opad_v ipad_v kv m) = 
-      bytesToBits (HP.HMAC256 (bitsToBytes m)
-                              (bitsToBytes (Vector.to_list kv))).
+      bytesToBits (HP.HMAC_SHA256.HmacCore (Integers.Byte.repr 54) (Integers.Byte.repr 92)
+                              (bitsToBytes m)
+                              (map Integers.Byte.repr (bitsToBytes (Vector.to_list kv)))).
 Proof.
   intros kv m LM.
   assert (LK : length (Vector.to_list kv) = b).
@@ -183,28 +185,34 @@ Proof.
   rewrite <- HMAC_spec_concat.HMAC_concat_pad; trivial.
   2: apply VectorToList_length.
   2: apply VectorToList_length.
-  eapply bits_bytes_ind_comp.
-    apply isbyte_hmac.
-  eapply HMAC_spec_pad.HMAC_Pad.HMAC_Pad_Concrete_equiv.
-  Focus 7.  reflexivity.
+(*  eapply bits_bytes_ind_comp.
+    apply isbyte_hmac.*)
+  eapply HMAC_spec_pad.HMAC_Pad.HMAC_Pad_Concrete_equiv'.
+(*  Focus 7.  reflexivity.
   Focus 7. symmetry. apply HMAC_functional_prog_Z.HMAC_progZ.HMAC_functional_prog_Z_equiv.
+*)
+
+  split; omega.
+  split; omega.
 
   (* key length *)
-  { rewrite bitsToBytes_len_gen with (n:=64%nat). 
+  { rewrite map_length. rewrite bitsToBytes_len_gen with (n:=64%nat). 
     reflexivity.
     rewrite LK; reflexivity. }
 
   (* key length *)
-  { rewrite bitsToBytes_len. reflexivity. apply LK. }
+  { rewrite Zlength_map. rewrite bitsToBytes_len. reflexivity. apply LK. }
 
   (* TODO: maybe replace bytes_bits_lists with bytesToBits? Since bytes_bits_comp_ind
      is used a lot *)
 
   (* key *)
-  { apply bytes_bits_comp_ind. 
-    eapply HMAC_spec_pad.HMAC_Pad.bitsToBytes_isbyteZ; reflexivity.
-    rewrite  bits_bytes_bits_id; trivial.
-    apply HMAC_spec_concat.block_8. assumption. }
+  { rewrite map_unsigned_Brepr_isbyte.
+      apply bytes_bits_comp_ind. 
+      eapply HMAC_spec_pad.HMAC_Pad.bitsToBytes_isbyteZ; reflexivity.
+      rewrite  bits_bytes_bits_id; trivial.
+      apply HMAC_spec_concat.block_8. assumption.
+      eapply HMAC_spec_pad.HMAC_Pad.bitsToBytes_isbyteZ. reflexivity. }
 
   (* uses fact that message is in blocks of 8 *)
   { apply bytes_bits_comp_ind.
@@ -226,5 +234,6 @@ Proof.
       destruct ipad_length.  
       apply Vector.to_list_of_list_opp. }
 Qed.
+
 
 End EQUIV.

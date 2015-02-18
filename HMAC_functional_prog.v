@@ -35,6 +35,8 @@ Definition mkKey (l:list Z) : list Z :=
   then (zeroPad (HF.Hash l)) 
   else zeroPad l.
 
+Definition KeyPreparation (l:list Z) : list byte := map Byte.repr (mkKey l).
+
 Definition mkArg (key:list byte) (pad:byte): list byte := 
        (map (fun p => Byte.xor (fst p) (snd p))
           (combine key (sixtyfour pad))).
@@ -55,13 +57,15 @@ Definition outerArg OP (innerRes: list Z) key: list Z :=
 
 Definition OUTER OP k innerRes := HF.Hash (outerArg OP innerRes k).
 
+Definition HmacCore IP OP txt (key: list byte): list Z := OUTER OP key (INNER IP key txt).
+
 Definition HMAC IP OP txt password: list Z := 
-  let key := map Byte.repr (mkKey password) in
-  OUTER OP key (INNER IP key txt).
+  let key := KeyPreparation password in
+  HmacCore IP OP txt key.
 
 Definition APPLY a txt :=  HF.Hash (a ++ txt).
 Definition HMAC' IP OP txt password: list Z := 
-  let key := map Byte.repr (mkKey password) in
+  let key := KeyPreparation password in
   APPLY (mkArgZ key OP) (APPLY (mkArgZ key IP) txt).
 
 Goal forall IP OP txt password,

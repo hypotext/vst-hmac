@@ -236,7 +236,7 @@ Proof.
   unfold HMAC_SHA256.HMAC.
 
   unfold HP.HMAC256.
-  unfold HP.HMAC_SHA256.HMAC.
+  unfold HP.HMAC_SHA256.HMAC, HP.HMAC_SHA256.HmacCore, HP.HMAC_SHA256.KeyPreparation.
 
   unfold HMAC_SHA256.OUTER.
   unfold HMAC_SHA256.INNER.
