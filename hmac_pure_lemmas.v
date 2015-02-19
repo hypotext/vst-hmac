@@ -187,3 +187,26 @@ Qed.
 Lemma Zlength_max_zero {A} (l:list A): Z.max 0 (Zlength l) = Zlength l.
 Proof. rewrite Z.max_r. trivial. apply Zlength_nonneg. Qed.
 
+
+Theorem xor_inrange : forall (x y : Z),
+                        x = x mod Byte.modulus
+                        -> y = y mod Byte.modulus
+                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
+Proof.
+  intros. symmetry. apply Byte.equal_same_bits. intros.
+  assert (ZZ: Z.lxor x y mod Byte.modulus =
+        Z.lxor x y mod two_p (Z.of_nat Byte.wordsize)).
+        rewrite Byte.modulus_power. reflexivity.
+  rewrite ZZ; clear ZZ.     
+  rewrite Byte.Ztestbit_mod_two_p; try omega.
+  destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. 
+  symmetry. rewrite Z.lxor_spec.
+  assert (BB: Byte.modulus = two_p (Z.of_nat Byte.wordsize)).
+    apply Byte.modulus_power. 
+  rewrite BB in H, H0.
+
+  rewrite H; clear H; rewrite H0; clear H0 BB.
+   rewrite Byte.Ztestbit_mod_two_p; try omega.
+   rewrite Byte.Ztestbit_mod_two_p; try omega.
+   destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. omega.
+Qed.

@@ -51,15 +51,15 @@ Proof. unfold iv_v.
 Qed.
 
 Lemma opad_length:
-  length (bytesToBits (HMAC_functional_prog_Z.HMAC_progZ.HMAC_SHA256.sixtyfour
-                       HMAC_functional_prog_Z.HMAC_progZ.Opad)) = b.
+  length (bytesToBits (HP.HMAC_SHA256.sixtyfour
+                       (Integers.Byte.unsigned HP.Opad))) = b.
 Proof. rewrite bytesToBits_len, length_SF. reflexivity. Qed.
  
 Definition opad_v: Bvector b := of_list_length _ _ _ opad_length.
 
 Lemma ipad_length:
-  length (bytesToBits (HMAC_functional_prog_Z.HMAC_progZ.HMAC_SHA256.sixtyfour
-                       HMAC_functional_prog_Z.HMAC_progZ.Ipad)) = b.
+  length (bytesToBits (HP.HMAC_SHA256.sixtyfour
+                       (Integers.Byte.unsigned HP.Ipad))) = b.
 Proof. rewrite bytesToBits_len, length_SF. reflexivity. Qed. 
  
 Definition ipad_v: Bvector b := of_list_length _ _ _ ipad_length.
@@ -188,9 +188,6 @@ Proof.
 (*  eapply bits_bytes_ind_comp.
     apply isbyte_hmac.*)
   eapply HMAC_spec_pad.HMAC_Pad.HMAC_Pad_Concrete_equiv'.
-(*  Focus 7.  reflexivity.
-  Focus 7. symmetry. apply HMAC_functional_prog_Z.HMAC_progZ.HMAC_functional_prog_Z_equiv.
-*)
 
   split; omega.
   split; omega.
@@ -222,14 +219,14 @@ Proof.
 
   (* opad *)
   { apply bytes_bits_comp_ind.
-    apply pure_lemmas.Forall_list_repeat. unfold HMAC_functional_prog_Z.HMAC_progZ.Opad. omega.
+    apply pure_lemmas.Forall_list_repeat. unfold HP.Opad. omega.
     unfold opad_v, of_list_length.
       destruct opad_length.
       apply Vector.to_list_of_list_opp. }
 
   (* ipad *)
   { apply bytes_bits_comp_ind. 
-    apply pure_lemmas.Forall_list_repeat. unfold HMAC_functional_prog_Z.HMAC_progZ.Ipad. omega.
+    apply pure_lemmas.Forall_list_repeat. unfold HP.Ipad. omega.
     unfold ipad_v, of_list_length.
       destruct ipad_length.  
       apply Vector.to_list_of_list_opp. }

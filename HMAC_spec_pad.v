@@ -11,7 +11,7 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import SHA256.
 Require Import ByteBitRelations.
 Require Import XorCorrespondence.
-Require Import HMAC_functional_prog. (*_Z.*)
+Require Import HMAC_functional_prog. 
 Require Import HMAC_common_defs.
 Require Import HMAC_common_lemmas.
 Require Import hmac_pure_lemmas.
@@ -220,37 +220,6 @@ End XOR_Example.
 
 (* See XorCorrespondence.v *)
 
-(*From Katherine's HMAC_functional_prog_Z*)
-Theorem xor_inrange : forall (x y : Z),
-                        x = x mod Byte.modulus
-                        -> y = y mod Byte.modulus
-                        -> Z.lxor x y = (Z.lxor x y) mod Byte.modulus.
-Proof.
-  intros. symmetry. apply Byte.equal_same_bits. intros.
-  assert (ZZ: Z.lxor x y mod Byte.modulus =
-        Z.lxor x y mod two_p (Z.of_nat Byte.wordsize)).
-        rewrite Byte.modulus_power. reflexivity.
-  rewrite ZZ; clear ZZ.     
-  rewrite Byte.Ztestbit_mod_two_p; trivial.
-  destruct (zlt i (Z.of_nat Byte.wordsize)). trivial. 
-  symmetry. rewrite Z.lxor_spec.
-  assert (BB: Byte.modulus = two_p (Z.of_nat Byte.wordsize)).
-    apply Byte.modulus_power. 
-  rewrite BB in H, H0.
-
-  rewrite H; clear H; rewrite H0; clear H0 BB.
-   rewrite Byte.Ztestbit_mod_two_p; try omega.
-   rewrite Byte.Ztestbit_mod_two_p; try omega.
-   destruct (zlt i (Z.of_nat Byte.wordsize)); trivial. omega.
-Qed.
-
-
-Lemma isbyteZ_xor a b: isbyteZ a -> isbyteZ b -> isbyteZ (Z.lxor a b).
-Proof. intros. rewrite xor_inrange.
-        apply Z_mod_lt. omega.
-        symmetry; apply Zmod_small. apply H.
-        symmetry; apply Zmod_small. apply H0.
-Qed.
 (*
 Lemma inner_general_map : forall (ip : Blist) (IP_list : list Z) (k : Blist) (K : list Z),
                             bytes_bits_lists ip IP_list ->

@@ -5,7 +5,6 @@ Require Import XorCorrespondence. (* Blist *)
 Require Import Integers.          (* byte *)
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import hmac_pure_lemmas.
-Require Import HMAC_functional_prog_Z.
 
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Program.Tactics.
