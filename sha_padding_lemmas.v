@@ -285,7 +285,6 @@ Proof.
   apply p_self.
 Qed.  
   
-  
 (* ------------------------------------------------ *)
 
 (* Lemma 2: |M1| = |M2| -> |Pad(M1)| = |Pad(M2)| *)
@@ -309,4 +308,187 @@ or, if one-to-one property is desired (for HMAC), only need to prove that
 the padded messages differ
 *)
 
-(* Unproven *)
+Definition generate_and_pad_copy msg := 
+  let n := Zlength msg in
+   Zlist_to_intlist (msg ++ [128%Z] 
+                ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0)
+           ++ [Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)].
+
+(* Probably easier to use the rewritten version; already "proved"
+ that that's in blocks of 4 *)
+
+Theorem length_differ_pad_differ : forall (m1 m2 : list Z),
+                                     Zlength m1 <> Zlength m2 ->
+                                     generate_and_pad m1 <> generate_and_pad m2.
+Proof.
+  intros m1 m2 len_diff.
+  unfold generate_and_pad.
+  
+  
+Admitted.
+
+(* TODO prove equivalent to above *)
+Theorem contrapositive_gap : forall (m1 m2 : list Z),
+                                     generate_and_pad m1 = generate_and_pad m2 ->
+                                     Zlength m1 = Zlength m2.
+
+Proof.
+  intros m1 m2 gap_eq.
+  unfold generate_and_pad in *.
+  
+  
+Admitted.
+
+(* ---------------------------------------------- *)
+
+(* TODO: Prove that the above three lemmas imply that generate_and_pad is one-to-one
+-- actually, that has type list Z -> list int.
+
+Prove first that it implies the pad function is one-to-one (defined above).
+
+Then, lift it to the vector version.
+
+  Variable splitAndPad : Blist -> list (Bvector b).
+  Hypothesis splitAndPad_1_1 : 
+    forall b1 b2,
+      splitAndPad b1 = splitAndPad b2 ->
+      b1 = b2.
+*)
+
+SearchAbout (_ <> _ -> _ <> _).
+
+Require Import Coq.Logic.Decidable.
+
+
+Lemma f_app_equal : forall {A B : Type} (f : A -> B) (x y : A),
+                      x = y -> f x = f y.
+Proof. intros. rewrite H. reflexivity. Qed.
+
+Theorem pad_1_1_len : forall (m1 m2 : list Z),
+                    pad m1 = pad m2 ->
+                    length m1 = length m2.
+Proof.
+  intros m1 m2.
+  
+  (* apply contrapositive. *)
+  (* * unfold decidable. *)
+  (*   omega. *)
+  (* * intros lenfalse. *)
+  (*   unfold pad. *)
+
+  intros pad_eq.
+  unfold pad in *.
+
+(*
+  assert (lp : length (pad m1) = length (pad m2)).
+    apply f_app_equal. apply pad_eq.
+  unfold pad in lp.
+  repeat rewrite app_length in lp.
+  simpl in lp.
+  rewrite plus_comm in lp.
+  symmetry in lp.
+  rewrite plus_comm in lp.
+  inversion lp.
+  clear lp.
+  repeat rewrite -> length_list_repeat in *.
+  repeat rewrite -> length_intlist_to_Zlist in *.
+  simpl in *.
+  repeat rewrite -> Zlength_correct in *.
+  assert (forall x y z : nat, (x + y + z)%nat = (y + x + z)%nat) as plus_comm_3.
+    intros. omega.
+  rewrite -> plus_comm_3 in H0. symmetry in H0.
+  rewrite -> plus_comm_3 in H0.
+  inversion H0. clear H0.
+  SearchAbout ((_ + _) mod _).
+  SearchAbout (-_ mod _).
+  SearchAbout (- (_ + _)).
+  rewrite -> Z.opp_add_distr in H1. symmetry in H1. rewrite -> Z.opp_add_distr in H1.
+  
+  SearchAbout ((_ + _) mod _).
+
+not true
+*)
+
+  (* f(x) + x = f(y) + y. x = y? not necessarily; f(c) = -c for example. 
+     what if x,y,f(c):nat? then it must be true by inversion? *)
+  
+  
+  
+  (* generalize dependent H1. *)
+  (* apply contrapositive. *)
+  (* * admit. *)
+  (* * intros lenfalse. *)
+  (*   SearchAbout (_ -> False). *)
+  (*   SearchAbout (_ <> _). *)
+    
+
+  assert (forall x y : nat, -(x + y) = -x + -y).
+
+  (* specialize (f_app_equal length). *)
+  SearchAbout (_ ++ _ = _ ++ _).
+  (* apply app_inv_tail in pad_eq. *)
+  (* apply app_inj_tail in pad_eq. *)
+
+Admitted.
+
+
+
+Theorem pad_general : forall (m1 m2 l1 l2 : list Z),
+                     length l1 = length l2 ->
+                     m1 ++ l1 = m2 ++ l2 ->
+                     m1 = m2.
+Proof.
+  intros m1 m2 l1 l2 len_tail_eq concat_eq.
+  SearchAbout (_ ++ _ = _ ++ _).
+  revert m2 l1 l2 len_tail_eq concat_eq.
+  induction m1; intros.
+  *
+    destruct m2.
+    - reflexivity.
+    - rewrite -> app_nil_l in concat_eq.
+      assert (length l1 = length (z :: m2 ++ l2)) as length_absurd.
+      { apply f_app_equal. apply concat_eq. }
+      simpl in length_absurd.
+      rewrite -> len_tail_eq in length_absurd.
+      rewrite -> app_length in length_absurd.
+      omega.
+  *
+    destruct m2.
+    - 
+      rewrite -> app_nil_l in concat_eq.
+      assert (length (a :: m1 ++ l1) = length l2) as length_absurd.
+      { apply f_app_equal. apply concat_eq. }
+      simpl in length_absurd.
+      rewrite <- len_tail_eq in length_absurd.
+      rewrite -> app_length in length_absurd.
+      omega.
+    -
+      f_equal.
+      + 
+        inversion concat_eq.
+        reflexivity.
+      +
+        apply (IHm1 m2 l1 l2).
+        apply len_tail_eq.
+        inversion concat_eq.
+        reflexivity.
+Qed.
+
+
+Theorem pad_1_1 : forall (m1 m2 : list Z),
+                    pad m1 = pad m2 ->
+                    m1 = m2.
+Proof.
+  intros m1 m2 pad_eq.
+  unfold pad in *.
+  apply pad_general in pad_eq.
+  apply pad_eq.
+  repeat rewrite -> app_length.
+  simpl.
+  f_equal.
+  f_equal.
+  *
+    do 6 f_equal.
+    (* apply pad_1_1_len. *)
+    admit.
+Qed.
